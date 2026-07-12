@@ -1,0 +1,21 @@
+# 24/7 Breakdown Recovery Manchester
+# https://breakdown-recovery-manchester.co.uk
+
+User-agent: *
+Allow: /
+
+# Allow all major search and AI crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# Sitemap
+Sitemap: https://breakdown-recovery-manchester.co.uk/sitemap.xml

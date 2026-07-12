@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="24/7 Recovery Manchester">
+  <rect width="512" height="512" fill="#141414"/>
+  <!-- hazard stripe accents -->
+  <rect x="0" y="0" width="512" height="26" fill="#f5c518"/>
+  <rect x="0" y="486" width="512" height="26" fill="#f5c518"/>
+  <!-- brand badge with hard offset shadow -->
+  <rect x="176" y="80" width="200" height="200" fill="#000000"/>
+  <rect x="156" y="60" width="200" height="200" fill="#f5c518"/>
+  <!-- tow-hook glyph -->
+  <g fill="none" stroke="#141414" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="256" cy="110" r="13.5"/>
+    <path d="M256 123.5 V 175 C 256 203 223 205 221.5 175"/>
+  </g>
+  <!-- wordmark -->
+  <g text-anchor="middle" font-family="'Anton', 'Arial Narrow', sans-serif" font-weight="900">
+    <text x="256" y="360" font-size="112" fill="#ffffff" letter-spacing="-2">24/7</text>
+    <text x="256" y="428" font-size="58" fill="#f5c518" letter-spacing="6">RECOVERY</text>
+  </g>
+</svg>

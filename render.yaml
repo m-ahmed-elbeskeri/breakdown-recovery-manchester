@@ -1,0 +1,25 @@
+# Render Blueprint for the backend API. See DEPLOY.md for the walkthrough.
+# In the Render dashboard: New → Blueprint → connect this repo. Render reads
+# this file, builds the Docker image, and prompts for the secret env vars below.
+services:
+  - type: web
+    name: breakdown-recovery-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL # your Neon connection string
+        sync: false
+      - key: ADMIN_API_KEY # secret for GET /api/bookings
+        sync: false
+      - key: CORS_ORIGINS # your deployed site origin(s), comma-separated
+        sync: false
+      - key: RESEND_API_KEY # optional — email alerts
+        sync: false
+      - key: NOTIFY_EMAIL_TO # optional — where alerts go
+        sync: false
+      - key: NOTIFY_EMAIL_FROM
+        value: onboarding@resend.dev
