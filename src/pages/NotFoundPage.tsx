@@ -10,7 +10,7 @@ export function NotFoundPage() {
     <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col items-center justify-center text-center px-6">
       <Logo className="w-14 h-14 mb-6" />
       <p className="font-display text-6xl md:text-8xl text-slate-950 tracking-tight">404</p>
-      <h1 className="font-display text-2xl md:text-3xl uppercase tracking-tight mt-4">
+      <h1 className="font-sans font-extrabold text-2xl md:text-3xl tracking-tight mt-4">
         Page not found
       </h1>
       <p className="text-slate-600 font-medium mt-3 max-w-md">

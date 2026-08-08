@@ -1,0 +1,15 @@
+# SPA fallback. This file is REQUIRED, not an optimisation.
+#
+# Routing is client-side (react-router), so only `/index.html` exists on disk.
+# Without this rule every area page — /breakdown-recovery-bolton and the other
+# 34 in sitemap.xml — returns a hard 404 when opened directly or refreshed,
+# including to Googlebot. That would sink the entire per-area SEO strategy the
+# site is built around.
+#
+# The 200 (rather than 301/302) is what makes it a rewrite: the URL stays put
+# and React renders the right region. Real files on disk (sitemap.xml,
+# robots.txt, /assets/*) are served before this rule is consulted.
+#
+# Understood by Cloudflare Pages and Netlify.
+
+/*    /index.html   200

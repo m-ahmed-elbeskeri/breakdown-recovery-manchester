@@ -2,7 +2,7 @@
 // URL and JSON-LD structured data whenever the active region changes.
 
 import { useEffect } from 'react';
-import { SITE_URL, PHONE_TEL, PHONE_DISPLAY, HOME_REGION, slugify } from './config';
+import { SITE_URL, PHONE_TEL, PHONE_DISPLAY, HOME_REGION, BRAND_NAME, slugify } from './config';
 import { buildFaqItems } from './data';
 
 const setMeta = (selector: string, attr: 'name' | 'property', key: string, value: string) => {
@@ -54,7 +54,7 @@ export function useRegionSeo(regionName: string): void {
     const canonicalPath = isHome ? '/' : `/breakdown-recovery-${slugify(regionName)}`;
     const canonicalUrl = `${SITE_URL}${canonicalPath}`;
 
-    const title = `24/7 Breakdown Recovery ${regionName} | Fast Towing`;
+    const title = `24/7 Breakdown Recovery ${regionName} | ${BRAND_NAME}`;
     const description = `24/7 breakdown recovery in ${regionName}. Avg 24-min response, fully insured, no hidden fees. Call ${PHONE_DISPLAY} for immediate towing & roadside help.`;
 
     document.title = title;
@@ -75,7 +75,7 @@ export function useRegionSeo(regionName: string): void {
       '@context': 'https://schema.org',
       '@type': ['LocalBusiness', 'AutomotiveBusiness'],
       '@id': `${canonicalUrl}#business`,
-      name: `24/7 Breakdown Recovery ${regionName}`,
+      name: BRAND_NAME,
       url: canonicalUrl,
       telephone: PHONE_TEL,
       priceRange: '££',
@@ -130,7 +130,7 @@ export function useRegionSeo(regionName: string): void {
 /** Mark a page as not-found so search engines don't index soft-404s. */
 export function useNoIndex(): void {
   useEffect(() => {
-    document.title = 'Page not found | 24/7 Breakdown Recovery Manchester';
+    document.title = `Page not found | ${BRAND_NAME}`;
     setRobots('noindex, follow');
     removeStructuredData('region-business');
     removeStructuredData('region-breadcrumb');

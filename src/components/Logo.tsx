@@ -1,7 +1,8 @@
-// Custom brand mark: a bold tow-hook — the universal symbol of vehicle recovery
-// — on a brutalist red badge with a hard black offset shadow, echoing the
-// site's shadow-[Npx] aesthetic. Drawn from scratch (not an icon-library glyph)
-// so it reads as a designed logo rather than a generic truck.
+// Custom brand mark for Recovery Mayt — "mayt" as in mate, the one who turns up
+// when you're stuck. So the mark is a friendly face on a round hazard-yellow
+// badge, and the smile *is* a tow hook: the mouth sweeps down and its right tip
+// curls back up into the hook's throat. Recovery kit and a grin in one glyph.
+// Drawn from scratch (not an icon-library glyph) so it reads as a real logo.
 
 export function Logo({ className = 'w-10 h-10' }: { className?: string }) {
   return (
@@ -12,15 +13,23 @@ export function Logo({ className = 'w-10 h-10' }: { className?: string }) {
       aria-hidden="true"
       focusable="false"
     >
-      {/* hard offset shadow */}
-      <rect x="6" y="6" width="40" height="40" fill="#0a0a0a" />
-      {/* hazard-yellow badge */}
-      <rect x="0" y="0" width="40" height="40" fill="#f5c518" />
-      {/* tow-hook glyph */}
-      <g fill="none" stroke="#141414" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="20" cy="10" r="2.7" />
-        <path d="M20 12.7 V 23 C 20 28.6 13.4 29 13.1 23" />
-      </g>
+      {/* round hazard-yellow badge with a soft dark ring */}
+      <circle cx="24" cy="24" r="22" fill="#f5c518" />
+      <circle cx="24" cy="24" r="22" fill="none" stroke="#0e151d" strokeWidth="3" />
+
+      {/* eyes */}
+      <circle cx="17" cy="19.5" r="2.6" fill="#0e151d" />
+      <circle cx="31" cy="19.5" r="2.6" fill="#0e151d" />
+
+      {/* smile that becomes a tow hook at its right tip */}
+      <path
+        d="M14.5 27.5 C 17.5 34.5, 27.5 35.5, 31.5 29.5 C 33.2 26.8, 30.2 25.2, 29.8 28.4"
+        fill="none"
+        stroke="#0e151d"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

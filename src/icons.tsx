@@ -38,6 +38,9 @@ import {
   DoubleCheck as I_DoubleCheck,
   Quote as I_Quote,
   Calendar as I_Calendar,
+  ClockRotateRight as I_ClockRotateRight,
+  DeliveryTruck as I_DeliveryTruck,
+  Coins as I_Coins,
 } from 'iconoir-react';
 import type { ComponentType, SVGProps } from 'react';
 
@@ -93,3 +96,7 @@ export const CheckCheck = bold(I_DoubleCheck);
 export const Quote = bold(I_Quote);
 export const Calendar = bold(I_Calendar);
 export const ChevronUp = bold(I_NavArrowUp);
+/** Round-the-clock: an arrow circling the dial, not a static clock face. */
+export const ClockRound = bold(I_ClockRotateRight);
+export const DeliveryTruck = bold(I_DeliveryTruck);
+export const Coins = bold(I_Coins);

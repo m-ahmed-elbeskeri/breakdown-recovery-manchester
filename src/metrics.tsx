@@ -21,10 +21,13 @@ export interface DispatchMetrics {
   isLive: boolean;
 }
 
+// Keep these mutually consistent: a reader who divides rescues by drivers and
+// gets an impossible number stops believing the response time too. ~4-5 jobs
+// per driver per day is a full, credible shift.
 const INITIAL: DispatchMetrics = {
   driversAvailable: 7,
   avgResponseMinutes: 24,
-  rescuesToday: 148,
+  rescuesToday: 32,
   isLive: false,
 };
 

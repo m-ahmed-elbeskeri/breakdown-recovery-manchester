@@ -2,7 +2,7 @@
 // so copy can be edited in one place and reused by both the rendered UI and the
 // structured-data (JSON-LD) layer without the two drifting apart.
 
-import { Clock, ShieldCheck, MapPin, Star, Zap, Truck, Warehouse } from './icons';
+import { ClockRound, ShieldCheck, DeliveryTruck, Coins, Zap, Truck, Warehouse } from './icons';
 import type { ComponentType } from 'react';
 
 type IconType = ComponentType<{ className?: string }>;
@@ -12,11 +12,13 @@ export interface TrustItem {
   icon: IconType;
 }
 
+// Each icon has to mean its label literally. A map pin says "a location", not
+// "the whole UK"; a star says "highly rated", not "cheap".
 export const TRUST_ITEMS: TrustItem[] = [
-  { text: '24/7 Availability', icon: Clock },
+  { text: '24/7 Availability', icon: ClockRound },
   { text: 'Fully Insured', icon: ShieldCheck },
-  { text: 'UK Wide Transport', icon: MapPin },
-  { text: 'Low Cost Guarantee', icon: Star },
+  { text: 'UK Wide Transport', icon: DeliveryTruck },
+  { text: 'Low Cost Guarantee', icon: Coins },
 ];
 
 export interface FeaturedService {

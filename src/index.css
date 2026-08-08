@@ -6,36 +6,111 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Anton', 'Inter Tight', 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  /* ── Hi-Vis Workwear palette ──────────────────────────────────────────────
-     The design was built on red-600 (primary) + yellow-400 (accent). We remap
-     the scales the app already uses so that structural reds become ink-black and
-     accents that sit on dark panels become hazard yellow — turning the whole
-     site hi-vis without touching most markup. Yellow action buttons, the hazard
-     stripe, the CTA band and the logo are handled explicitly in the components. */
-  --color-red-50: #fbf4d2;
-  --color-red-100: #f6e7a3;
-  --color-red-300: #7a7a7a;
-  --color-red-400: #f5c518; /* accent text on dark → hazard yellow */
-  --color-red-500: #f5c518; /* accent text on dark → hazard yellow */
-  --color-red-600: #141414; /* primary structural → ink black */
-  --color-red-700: #000000;
-  --color-red-800: #3a3a3a;
+  /* ══ Recovery Mayt design tokens ═══════════════════════════════════════════
+     The single source of truth for colour. Documented in /BRAND.md — change a
+     value here and the whole site follows; do not hard-code hex in components.
 
-  --color-yellow-300: #ffe04a;
-  --color-yellow-400: #f5c518; /* hazard yellow */
+     Three roles, and only three:
+       NAVY    = trust. Accents, links, structure, the big reassurance panels.
+                 The colour UK breakdown and emergency services reach for,
+                 because it reads calm and competent.
+       YELLOW  = action. Buttons and things meant to be tapped. Never a large
+                 background: at page scale hi-vis yellow reads as hazard, which
+                 raises the pulse of someone already frightened.
+       INK     = one neutral ramp for everything else.
+
+     Every neutral is mixed toward navy (hue ~213) rather than being a pure
+     grey. That is what stops the palette looking muddy: previously the page
+     mixed cool `slate`, neutral `neutral` and blue `navy`, which are three
+     different families. Both scales below now resolve to the SAME ink ramp, so
+     a light section and a dark panel are demonstrably the same colour family.
+     ────────────────────────────────────────────────────────────────────────── */
+
+  /* ── Ink: the one neutral ramp (drives both slate-* and neutral-*) ───────── */
+  --color-slate-50: #f5f7fa;
+  --color-slate-100: #eaeef3;
+  --color-slate-200: #d8dfe8;
+  --color-slate-300: #bac5d2;
+  --color-slate-400: #8f9dae;
+  --color-slate-500: #6d7c8e;
+  --color-slate-600: #52606f;
+  --color-slate-700: #3b4753;
+  --color-slate-800: #26303b;
+  --color-slate-900: #18202a;
+  --color-slate-950: #0e151d;
+
+  --color-neutral-50: #f5f7fa;
+  --color-neutral-100: #eaeef3;
+  --color-neutral-200: #d8dfe8;
+  --color-neutral-300: #bac5d2;
+  --color-neutral-400: #8f9dae;
+  --color-neutral-500: #6d7c8e;
+  --color-neutral-600: #52606f;
+  --color-neutral-700: #3b4753;
+  --color-neutral-800: #26303b;
+  --color-neutral-900: #18202a;
+  --color-neutral-950: #0e151d;
+
+  /* ── Navy: trust ────────────────────────────────────────────────────────── */
+  --color-navy-50: #eef4fb;
+  --color-navy-100: #d8e6f5;
+  --color-navy-200: #b3cdea;
+  --color-navy-300: #85aeda;
+  --color-navy-400: #5288c2;
+  --color-navy-500: #2f68a6;
+  --color-navy-600: #245488;
+  --color-navy-700: #1b4069;
+  --color-navy-800: #143050;
+  --color-navy-900: #0d2038;
+  --color-navy-950: #081525;
+
+  /* ── Yellow: action ─────────────────────────────────────────────────────── */
+  --color-yellow-300: #ffd94f; /* hover */
+  --color-yellow-400: #f5c518; /* the action colour */
+  --color-yellow-500: #d9a800; /* pressed / on light backgrounds */
+
+  /* ── Legacy scale remaps ────────────────────────────────────────────────────
+     The markup still says red-* and blue-* from the original build. Rather than
+     rewrite hundreds of class names, those scales resolve into the system:
+       red-600/700  → navy   (accent text on light backgrounds)
+       red-400/500  → yellow (accent text on dark panels)
+       blue-50/100  → navy tints (body text on navy panels)
+     True red is NOT in this palette; it is reserved for validation errors and
+     lives in --color-danger below. */
+  --color-red-50: var(--color-navy-50);
+  --color-red-100: var(--color-navy-100);
+  --color-red-300: var(--color-navy-300);
+  --color-red-400: var(--color-yellow-400);
+  --color-red-500: var(--color-yellow-400);
+  --color-red-600: var(--color-navy-700);
+  --color-red-700: var(--color-navy-800);
+  --color-red-800: var(--color-navy-800);
+
+  --color-blue-50: var(--color-navy-50);
+  --color-blue-100: var(--color-navy-100);
+
+  /* ── Semantic ─────────────────────────────────────────────────────────────
+     The only true red in the product. Errors previously rendered in yellow,
+     which made a failure look like a call to action. Two tints so the message
+     stays legible on either surface. */
+  --color-danger: #c0392b; /* on light surfaces */
+  --color-danger-soft: #ff8a7a; /* on the dark booking panel */
+  --color-success: #1f7a4d;
 }
 
-/* Diagonal hazard-warning stripes — the signature hi-vis motif. */
+/* A clean hi-vis rule. This was a diagonal caution-tape gradient: the strongest
+   "danger" signal on the page, shown to someone already stressed. Kept as a
+   solid marker stripe so the hi-vis identity survives without the alarm. */
 .hazard-stripes {
-  background-image: repeating-linear-gradient(45deg, #141414 0 14px, #f5c518 14px 28px);
+  background-color: var(--color-yellow-400);
 }
 
 /* flatpickr — Hi-Vis (black + hazard yellow) overrides on top of dark theme */
 .flatpickr-calendar {
-  background: #141414 !important;
-  border: 2px solid #f5c518 !important;
+  background: var(--color-neutral-950) !important;
+  border: 2px solid var(--color-yellow-400) !important;
   border-radius: 0 !important;
-  box-shadow: 8px 8px 0 0 #f5c518 !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
   font-family: 'Inter', sans-serif !important;
 }
 .flatpickr-calendar.arrowTop::before,
@@ -46,16 +121,16 @@
 }
 
 .flatpickr-months {
-  background: #141414 !important;
-  border-bottom: 2px solid #f5c518 !important;
+  background: var(--color-neutral-950) !important;
+  border-bottom: 2px solid var(--color-yellow-400) !important;
 }
 .flatpickr-months .flatpickr-month {
-  background: #141414 !important;
-  color: #f5c518 !important;
+  background: var(--color-neutral-950) !important;
+  color: var(--color-yellow-400) !important;
   height: 44px !important;
 }
 .flatpickr-current-month {
-  font-family: 'Anton', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 1rem !important;
   text-transform: uppercase !important;
   letter-spacing: 0.06em !important;
@@ -63,16 +138,16 @@
 }
 .flatpickr-current-month .flatpickr-monthDropdown-months,
 .flatpickr-current-month input.cur-year {
-  color: #f5c518 !important;
-  font-family: 'Anton', sans-serif !important;
+  color: var(--color-yellow-400) !important;
+  font-family: 'Inter', sans-serif !important;
 }
 .flatpickr-current-month .flatpickr-monthDropdown-months:hover {
   background: rgba(255, 255, 255, 0.08) !important;
 }
 .flatpickr-prev-month,
 .flatpickr-next-month {
-  color: #f5c518 !important;
-  fill: #f5c518 !important;
+  color: var(--color-yellow-400) !important;
+  fill: var(--color-yellow-400) !important;
 }
 .flatpickr-prev-month:hover,
 .flatpickr-next-month:hover {
@@ -85,11 +160,11 @@
 }
 
 .flatpickr-weekdays {
-  background: #141414 !important;
+  background: var(--color-neutral-950) !important;
   padding-top: 6px !important;
 }
 .flatpickr-weekday {
-  color: rgba(245, 197, 24, 0.6) !important;
+  color: color-mix(in srgb, var(--color-yellow-400) 60%, transparent) !important;
   font-weight: 800 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.1em !important;
@@ -108,24 +183,24 @@
 }
 .flatpickr-day:hover,
 .flatpickr-day:focus {
-  background: #f5c518 !important;
-  color: #141414 !important;
-  border-color: #f5c518 !important;
+  background: var(--color-yellow-400) !important;
+  color: var(--color-neutral-950) !important;
+  border-color: var(--color-yellow-400) !important;
 }
 .flatpickr-day.today {
-  border: 1px solid #f5c518 !important;
-  color: #f5c518 !important;
+  border: 1px solid var(--color-yellow-400) !important;
+  color: var(--color-yellow-400) !important;
 }
 .flatpickr-day.today:hover {
-  color: #141414 !important;
+  color: var(--color-neutral-950) !important;
 }
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange,
 .flatpickr-day.selected:hover {
-  background: #f5c518 !important;
-  border-color: #f5c518 !important;
-  color: #141414 !important;
+  background: var(--color-yellow-400) !important;
+  border-color: var(--color-yellow-400) !important;
+  color: var(--color-neutral-950) !important;
   font-weight: 900 !important;
 }
 .flatpickr-day.flatpickr-disabled,
@@ -139,8 +214,8 @@
 }
 
 .flatpickr-time {
-  background: #1c1c1c !important;
-  border-top: 2px solid #f5c518 !important;
+  background: var(--color-neutral-900) !important;
+  border-top: 2px solid var(--color-yellow-400) !important;
   height: 56px !important;
 }
 .flatpickr-time .numInputWrapper {
@@ -149,8 +224,8 @@
 .flatpickr-time input,
 .flatpickr-time .flatpickr-time-separator,
 .flatpickr-time .flatpickr-am-pm {
-  color: #f5c518 !important;
-  font-family: 'Anton', sans-serif !important;
+  color: var(--color-yellow-400) !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 1.5rem !important;
   background: transparent !important;
   font-weight: 900 !important;
@@ -160,10 +235,10 @@
   background: #000 !important;
 }
 .flatpickr-time .numInputWrapper span.arrowUp:after {
-  border-bottom-color: #f5c518 !important;
+  border-bottom-color: var(--color-yellow-400) !important;
 }
 .flatpickr-time .numInputWrapper span.arrowDown:after {
-  border-top-color: #f5c518 !important;
+  border-top-color: var(--color-yellow-400) !important;
 }
 .flatpickr-time .numInputWrapper span:hover:after {
   border-bottom-color: #fff !important;
@@ -175,26 +250,7 @@
 
 /* ── Motion & hi-vis flourishes ───────────────────────────────────────────── */
 
-/* Crawling caution tape. The pattern repeats every 39.6px on the x-axis
-   (28px band width ÷ cos45°), so translating by that keeps the loop seamless. */
-@keyframes hazard-scroll {
-  to {
-    background-position: 39.6px 0;
-  }
-}
-.hazard-anim {
-  animation: hazard-scroll 3s linear infinite;
-}
-
-/* Infinite dispatch ticker. Track holds the content twice; -50% = one copy. */
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
+/* Dispatch tape. A static row of what we do, clipped and faded at both edges. */
 .marquee {
   overflow: hidden;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
@@ -204,11 +260,6 @@
   display: inline-flex;
   flex-wrap: nowrap;
   white-space: nowrap;
-  will-change: transform;
-  animation: marquee 38s linear infinite;
-}
-.marquee:hover .marquee-track {
-  animation-play-state: paused;
 }
 
 /* Sheen sweep for glossy CTAs. */
@@ -257,8 +308,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hazard-anim,
-  .marquee-track,
   .kenburns {
     animation: none !important;
   }

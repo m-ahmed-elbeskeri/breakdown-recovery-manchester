@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Home } from '../icons';
 import { Logo } from '../components/Logo';
-import { PHONE_DISPLAY } from '../config';
+import { PHONE_DISPLAY, BRAND_NAME, BRAND_WORDMARK } from '../config';
 import { useNoIndex } from '../seo';
 
 export function PrivacyPolicy() {
   useNoIndex();
   useEffect(() => {
-    document.title = 'Privacy Policy | 24/7 Breakdown Recovery Manchester';
+    document.title = `Privacy Policy | ${BRAND_NAME}`;
     window.scrollTo(0, 0);
   }, []);
 
@@ -19,7 +19,7 @@ export function PrivacyPolicy() {
           <Link to="/" className="flex items-center gap-3">
             <Logo className="w-9 h-9 shrink-0" />
             <span className="font-display text-xl tracking-tight">
-              24/7<span className="text-red-600">RECOVERY</span>
+              {BRAND_WORDMARK[0]} <span className="text-red-600">{BRAND_WORDMARK[1]}</span>
             </span>
           </Link>
           <Link
@@ -32,12 +32,12 @@ export function PrivacyPolicy() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-12 prose prose-slate">
-        <h1 className="font-display text-3xl md:text-4xl uppercase tracking-tight mb-2">
+        <h1 className="font-sans font-extrabold text-3xl md:text-4xl tracking-tight mb-2">
           Privacy Policy
         </h1>
         <p className="text-sm text-slate-500">Last updated: July 2026</p>
 
-        <h2 className="font-display text-xl uppercase tracking-tight mt-8">What we collect</h2>
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">What we collect</h2>
         <p className="text-slate-700">
           When you request recovery we collect only what we need to reach you: your phone number,
           the pickup location you provide (or approximate GPS coordinates if you tap "Find Me"), the
@@ -45,13 +45,13 @@ export function PrivacyPolicy() {
           payment details to book.
         </p>
 
-        <h2 className="font-display text-xl uppercase tracking-tight mt-8">How we use it</h2>
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">How we use it</h2>
         <p className="text-slate-700">
           Your details are used solely to dispatch a recovery vehicle and to contact you about that
           recovery. We do not sell your data or use it for marketing.
         </p>
 
-        <h2 className="font-display text-xl uppercase tracking-tight mt-8">
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">
           Storage &amp; retention
         </h2>
         <p className="text-slate-700">
@@ -61,7 +61,7 @@ export function PrivacyPolicy() {
           for operational and legal purposes, after which they are deleted.
         </p>
 
-        <h2 className="font-display text-xl uppercase tracking-tight mt-8">Your rights</h2>
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">Your rights</h2>
         <p className="text-slate-700">
           Under UK GDPR you can ask us to access, correct, or erase the personal data we hold about
           you. To make a request, call {PHONE_DISPLAY} and quote the phone number you booked with.

@@ -21,6 +21,13 @@ export const ROADSIDE_FEES: Record<string, number> = {
   fuel: 40,
 };
 
+/**
+ * The lowest figure any job can start at — the "from £X" anchor shown before a
+ * customer hands over their details. Derived from the tariff above so it can
+ * never drift out of date when rates are tuned.
+ */
+export const FROM_PRICE = Math.min(CALLOUT_FEE, ...Object.values(ROADSIDE_FEES));
+
 const roundTo5 = (n: number): number => Math.round(n / 5) * 5;
 
 export const isNightHour = (date: Date): boolean => {

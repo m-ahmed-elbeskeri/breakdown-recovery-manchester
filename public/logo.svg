@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="24/7 Recovery Manchester">
-  <rect width="512" height="512" fill="#141414"/>
-  <!-- hazard stripe accents -->
-  <rect x="0" y="0" width="512" height="26" fill="#f5c518"/>
-  <rect x="0" y="486" width="512" height="26" fill="#f5c518"/>
-  <!-- brand badge with hard offset shadow -->
-  <rect x="176" y="80" width="200" height="200" fill="#000000"/>
-  <rect x="156" y="60" width="200" height="200" fill="#f5c518"/>
-  <!-- tow-hook glyph -->
-  <g fill="none" stroke="#141414" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="256" cy="110" r="13.5"/>
-    <path d="M256 123.5 V 175 C 256 203 223 205 221.5 175"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Recovery Mayt">
+  <rect width="512" height="512" fill="#0d2038"/>
+
+  <!-- brand mark: the smile is a tow hook -->
+  <g transform="translate(160,52) scale(4)">
+    <circle cx="24" cy="24" r="22" fill="#f5c518"/>
+    <circle cx="24" cy="24" r="22" fill="none" stroke="#0e151d" stroke-width="3"/>
+    <circle cx="17" cy="19.5" r="2.6" fill="#0e151d"/>
+    <circle cx="31" cy="19.5" r="2.6" fill="#0e151d"/>
+    <path d="M14.5 27.5 C 17.5 34.5, 27.5 35.5, 31.5 29.5 C 33.2 26.8, 30.2 25.2, 29.8 28.4"
+          fill="none" stroke="#0e151d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
+
   <!-- wordmark -->
-  <g text-anchor="middle" font-family="'Anton', 'Arial Narrow', sans-serif" font-weight="900">
-    <text x="256" y="360" font-size="112" fill="#ffffff" letter-spacing="-2">24/7</text>
-    <text x="256" y="428" font-size="58" fill="#f5c518" letter-spacing="6">RECOVERY</text>
+  <g text-anchor="middle" font-family="'Anton', 'Arial Narrow', Impact, sans-serif" font-weight="900">
+    <text x="256" y="360" font-size="72" fill="#ffffff" letter-spacing="2">RECOVERY</text>
+    <text x="256" y="436" font-size="72" fill="#f5c518" letter-spacing="8">MAYT</text>
   </g>
+
+  <rect x="0" y="486" width="512" height="26" fill="#f5c518"/>
 </svg>

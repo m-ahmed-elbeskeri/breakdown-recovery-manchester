@@ -223,10 +223,10 @@ export function AdminPage() {
                           </a>
                         </td>
                         <td className="p-3 text-neutral-400 whitespace-nowrap tabular-nums">
-                          {b.distanceMiles != null ? `${b.distanceMiles} mi` : '—'}
+                          {b.distanceMiles != null ? `${b.distanceMiles} mi` : '–'}
                         </td>
                         <td className="p-3 font-display text-yellow-400 tabular-nums">
-                          {b.price != null ? `£${b.price}` : '—'}
+                          {b.price != null ? `£${b.price}` : '–'}
                         </td>
                         <td className="p-3 text-neutral-400 whitespace-nowrap">
                           {b.timing === 'now' ? 'ASAP' : (b.scheduledFor ?? 'Scheduled')}

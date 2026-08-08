@@ -6,6 +6,15 @@ export const PHONE_TEL = '+441610000000';
 export const PHONE_DISPLAY = '0161 000 0000';
 export const HOME_REGION = 'Manchester';
 
+/** The trading name. Used in titles, structured data and the copyright line. */
+export const BRAND_NAME = 'Recovery Mayt';
+
+/**
+ * The wordmark, split so the second half can be accented in a different colour.
+ * Rendered as `{BRAND_WORDMARK[0]}<span class="accent">{BRAND_WORDMARK[1]}</span>`.
+ */
+export const BRAND_WORDMARK = ['RECOVERY', 'MAYT'] as const;
+
 /** Every area we serve. The first entry is the homepage region. */
 export const REGIONS = [
   'Manchester',

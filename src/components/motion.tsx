@@ -1,11 +1,39 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { animate, motion, useInView, useMotionValue } from 'motion/react';
+
+const SMALL_SCREEN = '(max-width: 639px)';
+
+const matchesSmallScreen = (): boolean =>
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia(SMALL_SCREEN).matches;
+
+/**
+ * True on phone-sized viewports, where reveal-on-scroll is skipped entirely.
+ * Flicking quickly down a phone screen outruns the 0.55s fade, so sections
+ * land blank — which reads as a broken page to someone stranded and stressed.
+ */
+function useSmallScreen(): boolean {
+  const [isSmall, setIsSmall] = useState(matchesSmallScreen);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(SMALL_SCREEN);
+    const update = () => setIsSmall(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return isSmall;
+}
 
 /**
  * Fades + lifts its children into view once, the first time they're scrolled to.
  * The lift is a transform, so `MotionConfig reducedMotion="user"` automatically
  * drops it (keeping just the fade) for visitors who prefer reduced motion.
+ * On phones the content is rendered outright — see `useSmallScreen`.
  */
 export function Reveal({
   children,
@@ -18,6 +46,10 @@ export function Reveal({
   delay?: number;
   y?: number;
 }) {
+  const isSmall = useSmallScreen();
+
+  if (isSmall) return <div className={className}>{children}</div>;
+
   return (
     <motion.div
       className={className}

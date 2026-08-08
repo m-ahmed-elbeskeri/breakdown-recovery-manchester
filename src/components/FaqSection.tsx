@@ -7,17 +7,17 @@ export function FaqSection({ regionName }: { regionName: string }) {
   const items = buildFaqItems(regionName);
   return (
     <section
-      className="bg-white border-t border-slate-200 py-20 px-4"
+      className="bg-white border-t border-slate-200 py-12 sm:py-20 px-4"
       aria-labelledby="faq-heading"
     >
       <div className="max-w-3xl mx-auto">
-        <Reveal className="text-center mb-12">
+        <Reveal className="text-center mb-8 sm:mb-12">
           <div className="text-xs font-black tracking-[0.3em] uppercase text-red-600 mb-3">
             Frequently Asked
           </div>
           <h2
             id="faq-heading"
-            className="font-display text-3xl md:text-5xl text-slate-950 tracking-tight uppercase"
+            className="font-sans font-extrabold text-3xl md:text-5xl text-slate-950 tracking-tight"
           >
             {regionName} Recovery FAQs
           </h2>
@@ -30,13 +30,13 @@ export function FaqSection({ regionName }: { regionName: string }) {
           {items.map((item, i) => (
             <Reveal key={item.q} delay={Math.min(i * 0.06, 0.3)}>
               <details className="group bg-slate-50 border-2 border-slate-200 hover:border-yellow-400 transition-colors">
-                <summary className="flex items-center justify-between gap-4 p-5 cursor-pointer list-none font-display text-base md:text-lg uppercase tracking-tight text-slate-950">
+                <summary className="flex items-center justify-between gap-4 p-5 cursor-pointer list-none font-sans font-bold text-base md:text-lg tracking-tight text-slate-950">
                   <span className="flex items-start gap-3">
                     <HelpCircle
                       className="w-5 h-5 text-red-600 shrink-0 mt-0.5"
                       aria-hidden="true"
                     />
-                    <h3 className="font-display tracking-tight">{item.q}</h3>
+                    <h3 className="font-sans font-bold tracking-tight">{item.q}</h3>
                   </span>
                   <ChevronDown
                     className="w-5 h-5 text-red-600 shrink-0 transition-transform group-open:rotate-180"

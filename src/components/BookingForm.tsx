@@ -23,7 +23,7 @@ import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
 import { validateQuote, type QuoteData } from '../validation';
 import { estimateRoute, type RouteEstimate } from '../route';
-import { estimatePrice, isNightHour } from '../pricing';
+import { estimatePrice, isNightHour, formatPrice, FROM_PRICE } from '../pricing';
 
 const defaultScheduledDate = (): Date => {
   const t = new Date();
@@ -190,7 +190,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const handleGetLocation = () => {
     setSubmitError(null);
     if (!('geolocation' in navigator)) {
-      setSubmitError('Geolocation is not supported by your browser — please type your location.');
+      setSubmitError('Geolocation is not supported by your browser. Please type your location.');
       return;
     }
     setIsLocating(true);
@@ -259,7 +259,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const errorMessage = submitError && (
     <p
       role="alert"
-      className="text-yellow-400 text-xs font-bold uppercase tracking-wider text-center pt-1"
+      className="text-[var(--color-danger-soft)] text-xs font-bold uppercase tracking-wider text-center pt-1"
     >
       {submitError}
     </p>
@@ -270,7 +270,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.4 }}
-      className="bg-neutral-950 text-white rounded-none relative lg:mt-0 mt-6 shadow-[10px_10px_0_0_#f5c518] sm:shadow-[14px_14px_0_0_#f5c518]"
+      className="bg-neutral-950 text-white rounded-none relative lg:mt-0 mt-4 shadow-xl"
     >
       <div className="absolute -top-3 left-5 bg-yellow-400 text-neutral-950 font-black px-3 py-1.5 rounded-none text-[11px] sm:text-xs uppercase tracking-[0.15em] z-20 flex items-center gap-2 border-2 border-neutral-950">
         <div className="w-1.5 h-1.5 bg-red-600 rounded-none animate-pulse"></div>
@@ -278,30 +278,39 @@ export function BookingForm({ regionName }: { regionName: string }) {
       </div>
 
       {/* Dispatch metrics (live from the backend, or representative figures) */}
-      <div className="grid grid-cols-2 border-b-2 border-yellow-400 pt-7">
-        <div className="flex flex-col items-center px-4 py-4 sm:py-5 border-r border-neutral-800">
-          <div className="text-[10px] sm:text-xs text-red-500 font-black mb-1 uppercase tracking-[0.2em]">
+      <div className="grid grid-cols-2 border-b-2 border-yellow-400 pt-6 sm:pt-7">
+        <div className="flex flex-col items-center px-4 py-2.5 sm:py-5 border-r border-neutral-800">
+          <div className="text-[10px] sm:text-xs text-red-500 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
             Avg Response
           </div>
-          <div className="font-display text-3xl sm:text-4xl flex items-baseline gap-1 text-yellow-400">
+          <div className="font-display text-2xl sm:text-4xl flex items-baseline gap-1 text-yellow-400">
             <CountUp value={metrics.avgResponseMinutes} />
             <span className="text-xs sm:text-sm font-bold text-neutral-500">min</span>
           </div>
         </div>
-        <div className="flex flex-col items-center px-4 py-4 sm:py-5">
-          <div className="text-[10px] sm:text-xs text-red-500 font-black mb-1 uppercase tracking-[0.2em]">
+        <div className="flex flex-col items-center px-4 py-2.5 sm:py-5">
+          <div className="text-[10px] sm:text-xs text-red-500 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
             {metrics.isLive ? 'Rescues Today' : 'Rescues / Day'}
           </div>
-          <div className="font-display text-3xl sm:text-4xl text-white">
+          <div className="font-display text-2xl sm:text-4xl text-white">
             <CountUp value={metrics.rescuesToday} />
           </div>
         </div>
       </div>
 
-      <div className="p-5 sm:p-7 w-full">
-        <h2 className="text-white font-display text-2xl sm:text-3xl tracking-tight mb-5 uppercase">
+      <div className="p-4 sm:p-7 w-full">
+        <h2 className="text-white font-sans font-extrabold text-xl sm:text-3xl tracking-tight mb-2">
           Get Back On The Road
         </h2>
+
+        {/* A price anchor before any details are handed over. Being asked for
+            your number before you know the cost is what makes people fear a
+            stitch-up at the worst possible moment. Derived from pricing.ts so
+            this line can't drift out of date. */}
+        <p className="text-[11px] sm:text-xs text-neutral-400 font-medium mb-3 sm:mb-5 leading-relaxed">
+          From <span className="text-yellow-400 font-bold">{formatPrice(FROM_PRICE)}</span>. You see
+          the full price before you confirm. No hidden fees.
+        </p>
 
         <div
           className={`relative ${
@@ -351,12 +360,12 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   <input
                     ref={locationRef}
                     type="text"
+                    // Kept short so it isn't clipped by the Find Me button on a
+                    // narrow phone — a half-truncated placeholder reads as broken.
                     placeholder={
-                      quoteData.timing === 'now'
-                        ? 'Pickup Location (e.g. M1 1AA)'
-                        : 'Where should we meet you?'
+                      quoteData.timing === 'now' ? 'Postcode or street' : 'Where shall we meet?'
                     }
-                    className="w-full pl-12 pr-[110px] py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                    className="w-full pl-11 sm:pl-12 pr-[96px] sm:pr-[110px] py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
                     value={quoteData.location}
                     onChange={(e) => setQuoteData({ ...quoteData, location: e.target.value })}
                     aria-label="Pickup location"
@@ -364,7 +373,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   <button
                     type="button"
                     onClick={handleGetLocation}
-                    className="absolute right-1.5 px-3 py-2 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-bold text-xs rounded-none transition-all flex items-center gap-1.5 active:scale-95"
+                    className="absolute right-1.5 px-2.5 sm:px-3 py-2 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-bold text-xs rounded-none transition-all flex items-center gap-1 sm:gap-1.5 active:scale-95"
                     title="Use my current location"
                     aria-label="Use my current location"
                   >
@@ -417,7 +426,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                 <button
                   type="button"
                   onClick={goToStep2}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider mt-4 shadow-[5px_5px_0_0_#0a0a0a] hover:shadow-[3px_3px_0_0_#0a0a0a] hover:translate-x-0.5 hover:translate-y-0.5"
+                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider mt-4 shadow-sm hover:shadow-md"
                 >
                   Continue
                   <ArrowRight className="w-5 h-5" />
@@ -510,7 +519,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     type="button"
                     onClick={handleBookingSubmit}
                     disabled={submitting}
-                    className="flex-1 bg-yellow-400 hover:bg-yellow-300 disabled:bg-yellow-400/50 disabled:cursor-not-allowed text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-[5px_5px_0_0_#0a0a0a] hover:shadow-[3px_3px_0_0_#0a0a0a] hover:translate-x-0.5 hover:translate-y-0.5"
+                    className="flex-1 bg-yellow-400 hover:bg-yellow-300 disabled:bg-yellow-400/50 disabled:cursor-not-allowed text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm hover:shadow-md"
                   >
                     {submitting ? (
                       <>
@@ -566,7 +575,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 320, damping: 17, delay: 0.15 }}
-                    className="mt-4 bg-yellow-400 text-neutral-950 px-5 py-2 rounded-none shadow-[4px_4px_0_0_#0a0a0a] flex items-baseline gap-2"
+                    className="mt-4 bg-yellow-400 text-neutral-950 px-5 py-2 rounded-none shadow-sm flex items-baseline gap-2"
                   >
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">
                       Your price
