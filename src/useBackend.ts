@@ -9,6 +9,10 @@ export interface BookingArgs {
   service: string;
   timing: 'now' | 'later';
   scheduledFor?: string;
+  /** Pickup coordinates, when the browser could resolve them. Lets the operator
+   *  alert carry an exact map pin instead of a search for the typed address. */
+  pickupLat?: number;
+  pickupLng?: number;
   /** Estimated tow distance (pickup → drop-off), when a destination is given. */
   distanceMiles?: number;
   /** Estimated tow driving time in minutes. */

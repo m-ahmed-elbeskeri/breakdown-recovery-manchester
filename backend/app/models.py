@@ -25,6 +25,12 @@ class Booking(Base):
     timing: Mapped[str] = mapped_column(String(10))  # "now" | "later"
     scheduled_for: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
+    # Where the customer actually is, resolved by the browser at booking time.
+    # Kept alongside the free-text location because a driver needs a pin, not a
+    # street name: "Church Street" is ambiguous, 53.4808/-2.2426 is not.
+    pickup_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pickup_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     distance_miles: Mapped[float | None] = mapped_column(Float, nullable=True)
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     price: Mapped[int | None] = mapped_column(Integer, nullable=True)

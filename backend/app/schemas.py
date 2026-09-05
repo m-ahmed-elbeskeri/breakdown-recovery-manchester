@@ -14,6 +14,8 @@ class BookingCreate(BaseModel):
     service: str = Field(min_length=1, max_length=40)
     timing: Literal["now", "later"]
     scheduledFor: Optional[str] = None
+    pickupLat: Optional[float] = Field(default=None, ge=-90, le=90)
+    pickupLng: Optional[float] = Field(default=None, ge=-180, le=180)
     distanceMiles: Optional[float] = None
     durationMinutes: Optional[int] = None
     price: Optional[int] = None
@@ -39,6 +41,8 @@ class BookingOut(BaseModel):
     service: str
     timing: str
     scheduledFor: Optional[str]
+    pickupLat: Optional[float]
+    pickupLng: Optional[float]
     distanceMiles: Optional[float]
     durationMinutes: Optional[int]
     price: Optional[int]

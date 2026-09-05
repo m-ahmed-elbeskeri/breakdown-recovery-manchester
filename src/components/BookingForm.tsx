@@ -22,7 +22,7 @@ import { CountUp } from './motion';
 import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
 import { validateQuote, type QuoteData } from '../validation';
-import { estimateRoute, type RouteEstimate } from '../route';
+import { estimateRoute, resolveLocation, type RouteEstimate } from '../route';
 import { estimatePrice, isNightHour, formatPrice, FROM_PRICE } from '../pricing';
 
 const defaultScheduledDate = (): Date => {
@@ -229,10 +229,25 @@ export function BookingForm({ regionName }: { regionName: string }) {
     }
     setSubmitError(null);
     setSubmitting(true);
+
+    // Resolve the pickup to a map pin so the operator's alert can link straight
+    // to it. Strictly best-effort: a geocoder that is slow, rate-limited or
+    // simply wrong must never stand between a stranded customer and a booking,
+    // so any failure just sends the booking without coordinates.
+    const pickup = quoteData.location.trim();
+    let pin: { lat: number; lng: number } | null = null;
+    try {
+      pin = await resolveLocation(pickup);
+    } catch {
+      /* geocoder unavailable — the email falls back to an address search */
+    }
+
     try {
       const result = await submitBooking({
         region: regionName,
-        location: quoteData.location.trim(),
+        location: pickup,
+        pickupLat: pin?.lat,
+        pickupLng: pin?.lng,
         destination: quoteData.destination.trim() || undefined,
         phone: quoteData.phone.trim(),
         service: quoteData.service,
