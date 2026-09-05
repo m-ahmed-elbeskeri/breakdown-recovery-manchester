@@ -145,7 +145,7 @@ export interface Testimonial {
 export const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      'Battery died at 2am after a wedding in Bolton. Driver was with me in 19 minutes — jumped the car and stayed until I was sure it would start again. Honestly faultless.',
+      "Car wouldn't start at 2am outside a wedding do in Bolton and I was stood there in heels in the rain nearly in tears. Lad turned up in about 20 minutes, jumped it, then made me sit and run the engine a bit before he'd leave. Told me the battery was on its way out, which it was. Can't fault him.",
     name: 'Sarah K.',
     area: 'Bolton',
     service: '12V Jump Start',
@@ -154,7 +154,7 @@ export const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      'Recovered my van from the M60 hard shoulder and dropped it at the dealership the same evening. Quoted the price upfront, no surprises on the invoice. Will use again.',
+      'Van packed in on the M60 near junction 25. Waited about 40 minutes which felt like a lifetime sat on the hard shoulder, but he rang me twice on the way to say where he was and that made a big difference. Got it to my garage in Stockport the same evening and the price was what he said on the phone.',
     name: 'Imran A.',
     area: 'Stockport',
     service: 'Vehicle Towing',
@@ -163,7 +163,7 @@ export const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      'EV refused to charge in a car park in Salford. They sent a flatbed within 25 minutes and got it to my preferred service centre. Calm, professional, properly insured.',
+      "My EV wouldn't take a charge in the work car park in Salford and you can't just tow one of them off, so I was dreading the whole thing. Flatbed came, driver clearly knew what he was doing and didn't drag it an inch. Dropped it at the service centre I asked for. Only writing this because I expected a nightmare and it wasn't one.",
     name: 'Tom B.',
     area: 'Salford',
     service: 'EV Recovery',
