@@ -583,10 +583,26 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   tabIndex={-1}
                   className="font-display text-2xl text-white uppercase tracking-tight outline-none"
                 >
-                  {quoteData.timing === 'later' ? 'Booking confirmed' : 'Driver dispatched'}
+                  {confirmedPrice === null
+                    ? 'Request received'
+                    : quoteData.timing === 'later'
+                      ? 'Booking confirmed'
+                      : 'Driver dispatched'}
                 </h3>
                 <p className="text-neutral-300 text-sm mt-2 max-w-xs">
-                  {quoteData.timing === 'later' ? (
+                  {confirmedPrice === null ? (
+                    // No price could be calculated, so nothing has been agreed and
+                    // no truck is moving. Saying "driver dispatched" here would be
+                    // a promise the business hasn't made — and worse, it could stop
+                    // someone stranded from ringing anyone else.
+                    <>
+                      We've got your details for{' '}
+                      <span className="text-yellow-400 font-bold">{quoteData.location}</span>. We'll
+                      ring you on{' '}
+                      <span className="text-yellow-400 font-bold">{quoteData.phone}</span> to
+                      confirm the price, then send a driver.
+                    </>
+                  ) : quoteData.timing === 'later' ? (
                     <>
                       We'll meet you at{' '}
                       <span className="text-yellow-400 font-bold">{quoteData.location}</span>.
@@ -611,7 +627,16 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     <span className="font-display text-2xl leading-none">£{confirmedPrice}</span>
                   </motion.div>
                 )}
-                {quoteData.timing === 'later' ? (
+                {confirmedPrice === null && quoteData.timing === 'now' ? (
+                  // Deliberately no ETA: an arrival countdown is the same false
+                  // promise as the heading, and the wait hasn't started yet.
+                  <div className="mt-5 flex flex-col items-center gap-1">
+                    <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
+                      Next step
+                    </span>
+                    <span className="font-display text-xl text-yellow-400">We'll call you</span>
+                  </div>
+                ) : quoteData.timing === 'later' ? (
                   <div className="mt-5 flex flex-col items-center gap-1">
                     <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
                       Scheduled for
