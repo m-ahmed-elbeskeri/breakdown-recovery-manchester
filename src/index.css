@@ -315,3 +315,21 @@
     animation: none;
   }
 }
+
+/* ── The painted "MAYTE!" ──────────────────────────────────────────────────
+   Second half of the wordmark, set in a brush face and tilted like it was
+   hand-painted on the side of a truck. Hazard yellow on a white header would
+   fail contrast on its own, so the glyphs carry an ink outline: signwriter's
+   trick, and it keeps the mark legible on light and dark surfaces alike. */
+.wordmark-paint {
+  font-family: 'Permanent Marker', var(--font-display);
+  font-weight: 400;
+  color: var(--color-yellow-400);
+  display: inline-block;
+  transform: rotate(-3deg);
+  transform-origin: 50% 80%;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 0.14em var(--color-slate-950);
+  letter-spacing: 0.01em;
+  padding-inline: 0.06em;
+}

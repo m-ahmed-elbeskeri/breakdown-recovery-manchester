@@ -1,4 +1,4 @@
-# Recovery Mayt — brand toolbox
+# Recovery Mayte — brand toolbox
 
 The design system for the site. **`src/index.css` is the single source of truth**
 — every value below is defined there as a CSS custom property. Change it there
@@ -8,13 +8,13 @@ and the whole site follows. Do not hard-code hex values in components.
 
 ## 1. The name
 
-**Recovery Mayt.** "Mayt" as in _mate_ — the one who turns up when you're stuck.
+**Recovery Mayte.** "Mayte" as in _mate_ — the one who turns up when you're stuck.
 That word does a lot of work and the rest of the system has to earn it: a
 customer meets this brand on the worst ten minutes of their week, on a phone, at
 the side of a road. Everything below is chosen to **lower** their pulse, not
 raise it.
 
-Written as `Recovery Mayt` in prose. Set as a two-part wordmark in the UI:
+Written as `Recovery Mayte` in prose. Set as a two-part wordmark in the UI:
 `RECOVERY` in ink, `MAYT` in the accent colour. Defined once in
 `src/config.ts` as `BRAND_NAME` and `BRAND_WORDMARK`.
 
@@ -230,7 +230,8 @@ Warm, plain, British. We are the mate who turns up.
 
 Not design, but the biggest trust gaps on the page:
 
-- `0161 000 0000` is a placeholder. So is the `.co.uk` domain and the `info@`
-  address. Real ones go in `src/config.ts` plus the JSON-LD in `index.html`.
+- The `.co.uk` domain and the `info@` address are still placeholders. Real ones
+  go in `src/config.ts` plus the JSON-LD in `index.html`. (The phone number is
+  live: `07442 384141`.)
 - No company number, trading address, insurer or accreditation is shown.
   "Fully insured" as plain text costs nothing to write, and readers know it.

@@ -1,4 +1,4 @@
-// Custom brand mark for Recovery Mayt — "mayt" as in mate, the one who turns up
+// Custom brand mark for Recovery Mayte — "mayt" as in mate, the one who turns up
 // when you're stuck. So the mark is a friendly face on a round hazard-yellow
 // badge, and the smile *is* a tow hook: the mouth sweeps down and its right tip
 // curls back up into the hook's throat. Recovery kit and a grin in one glyph.

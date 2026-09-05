@@ -19,7 +19,7 @@ export function PrivacyPolicy() {
           <Link to="/" className="flex items-center gap-3">
             <Logo className="w-9 h-9 shrink-0" />
             <span className="font-display text-xl tracking-tight">
-              {BRAND_WORDMARK[0]} <span className="text-red-600">{BRAND_WORDMARK[1]}</span>
+              {BRAND_WORDMARK[0]} <span className="wordmark-paint">{BRAND_WORDMARK[1]}</span>
             </span>
           </Link>
           <Link

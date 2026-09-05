@@ -78,9 +78,8 @@ Once you know the final domain, these still contain the placeholder
 
 And the details that are still placeholders regardless of domain:
 
-- [ ] **Phone number** — `PHONE_TEL` / `PHONE_DISPLAY` in `src/config.ts`, plus
-      `telephone` in the `index.html` JSON-LD and the noscript block. It is
-      currently `0161 000 0000`, which reads as obviously fake to a customer.
+- [x] **Phone number** — set to `07442 384141` in `PHONE_TEL` / `PHONE_DISPLAY`
+      (`src/config.ts`), the `index.html` JSON-LD and the noscript block.
 - [ ] **Email** — `email` in the JSON-LD
 - [ ] **Company number / trading address / insurer** — not currently shown
       anywhere; see the last section of `BRAND.md`

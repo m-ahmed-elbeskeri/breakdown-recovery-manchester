@@ -9,7 +9,7 @@ from .config import settings
 from .db import get_db
 from .notify import BookingDetails, send_booking_notification
 
-app = FastAPI(title="Recovery Mayt API", version="1.0.0")
+app = FastAPI(title="Recovery Mayte API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

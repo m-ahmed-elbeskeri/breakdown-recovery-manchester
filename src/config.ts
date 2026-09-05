@@ -2,18 +2,18 @@
 // for anything that appears in more than one place (phone number, URL, regions).
 
 export const SITE_URL = 'https://breakdown-recovery-manchester.co.uk';
-export const PHONE_TEL = '+441610000000';
-export const PHONE_DISPLAY = '0161 000 0000';
+export const PHONE_TEL = '+447442384141';
+export const PHONE_DISPLAY = '07442 384141';
 export const HOME_REGION = 'Manchester';
 
 /** The trading name. Used in titles, structured data and the copyright line. */
-export const BRAND_NAME = 'Recovery Mayt';
+export const BRAND_NAME = 'Recovery Mayte';
 
 /**
  * The wordmark, split so the second half can be accented in a different colour.
- * Rendered as `{BRAND_WORDMARK[0]}<span class="accent">{BRAND_WORDMARK[1]}</span>`.
+ * Rendered as `{BRAND_WORDMARK[0]}<span class="wordmark-paint">{BRAND_WORDMARK[1]}</span>`.
  */
-export const BRAND_WORDMARK = ['RECOVERY', 'MAYT'] as const;
+export const BRAND_WORDMARK = ['RECOVERY', 'MAYTE!'] as const;
 
 /** Every area we serve. The first entry is the homepage region. */
 export const REGIONS = [

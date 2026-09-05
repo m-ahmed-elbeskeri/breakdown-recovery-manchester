@@ -83,7 +83,7 @@ function Header({ regionName }: { regionName: string }) {
           <Logo className="w-11 h-11 shrink-0" />
           <div>
             <div className="font-display text-xl sm:text-2xl tracking-tight leading-none">
-              {BRAND_WORDMARK[0]} <span className="text-red-600">{BRAND_WORDMARK[1]}</span>
+              {BRAND_WORDMARK[0]} <span className="wordmark-paint">{BRAND_WORDMARK[1]}</span>
             </div>
             <div className="text-[10px] font-bold tracking-[0.2em] text-slate-500 uppercase mt-1">
               {regionName} Breakdown
@@ -370,7 +370,7 @@ function Footer({ regionName }: { regionName: string }) {
           <div className="flex items-center gap-3 mb-6">
             <Logo className="w-10 h-10 shrink-0" />
             <span className="font-display text-2xl tracking-tight text-white">
-              {BRAND_WORDMARK[0]} <span className="text-yellow-400">{BRAND_WORDMARK[1]}</span>
+              {BRAND_WORDMARK[0]} <span className="wordmark-paint">{BRAND_WORDMARK[1]}</span>
             </span>
           </div>
           <p className="mb-6 max-w-md font-medium leading-relaxed">
