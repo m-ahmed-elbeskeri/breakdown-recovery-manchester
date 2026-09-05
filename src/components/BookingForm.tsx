@@ -22,7 +22,8 @@ import { CountUp } from './motion';
 import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
 import { validateQuote, type QuoteData } from '../validation';
-import { estimateRoute, resolveLocation, type RouteEstimate } from '../route';
+import { estimateRoute, resolveLocation, type LatLng, type RouteEstimate } from '../route';
+import { PlaceInput } from './PlaceInput';
 import { estimatePrice, isNightHour, formatPrice, FROM_PRICE } from '../pricing';
 
 const defaultScheduledDate = (): Date => {
@@ -111,6 +112,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const [confirmedEta, setConfirmedEta] = useState<number | null>(null);
   const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
 
+  // Exact coordinates for a place the customer picked from the suggestions.
+  // Null whenever they've typed freehand, in which case we fall back to
+  // geocoding the text — the same behaviour as before autocomplete existed.
+  const [pickupPin, setPickupPin] = useState<LatLng | null>(null);
+  const [dropoffPin, setDropoffPin] = useState<LatLng | null>(null);
   const [estimate, setEstimate] = useState<RouteEstimate | null>(null);
   const [estimateStatus, setEstimateStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
     'idle',
@@ -144,7 +150,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
     const controller = new AbortController();
     setEstimateStatus('loading');
     const timer = setTimeout(() => {
-      estimateRoute(pickup, dropoff, controller.signal)
+      estimateRoute(pickupPin ?? pickup, dropoffPin ?? dropoff, controller.signal)
         .then((result) => {
           setEstimate(result);
           setEstimateStatus(result ? 'done' : 'error');
@@ -160,7 +166,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [formStep, needsDestination, pickup, dropoff]);
+  }, [formStep, needsDestination, pickup, dropoff, pickupPin, dropoffPin]);
 
   // Move focus to the first meaningful element of each step for keyboard/SR users.
   useEffect(() => {
@@ -201,6 +207,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
           ...prev,
           location: `Current location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
         }));
+        // The device just told us exactly where it is; that beats anything a
+        // geocoder could infer from the string we formatted out of it.
+        setPickupPin({ lat: latitude, lng: longitude });
         setIsLocating(false);
       },
       () => {
@@ -234,18 +243,20 @@ export function BookingForm({ regionName }: { regionName: string }) {
     // to it. Strictly best-effort: a geocoder that is slow, rate-limited or
     // simply wrong must never stand between a stranded customer and a booking,
     // so any failure just sends the booking without coordinates.
-    const pickup = quoteData.location.trim();
-    let pin: { lat: number; lng: number } | null = null;
-    try {
-      pin = await resolveLocation(pickup);
-    } catch {
-      /* geocoder unavailable — the email falls back to an address search */
+    const pickupText = quoteData.location.trim();
+    let pin: LatLng | null = pickupPin;
+    if (!pin) {
+      try {
+        pin = await resolveLocation(pickupText);
+      } catch {
+        /* geocoder unavailable — the email falls back to an address search */
+      }
     }
 
     try {
       const result = await submitBooking({
         region: regionName,
-        location: pickup,
+        location: pickupText,
         pickupLat: pin?.lat,
         pickupLng: pin?.lng,
         destination: quoteData.destination.trim() || undefined,
@@ -370,21 +381,22 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     Schedule Later
                   </button>
                 </div>
-                <div className="relative flex items-center">
+                <PlaceInput
+                  inputRef={locationRef}
+                  value={quoteData.location}
+                  onChange={(location, pin) => {
+                    setQuoteData({ ...quoteData, location });
+                    setPickupPin(pin);
+                  }}
+                  // Kept short so it isn't clipped by the Find Me button on a
+                  // narrow phone — a half-truncated placeholder reads as broken.
+                  placeholder={
+                    quoteData.timing === 'now' ? 'Postcode or street' : 'Where shall we meet?'
+                  }
+                  ariaLabel="Pickup location"
+                  className="w-full pl-11 sm:pl-12 pr-[96px] sm:pr-[110px] py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                >
                   <MapPin className="absolute left-4 w-5 h-5 text-neutral-400 pointer-events-none" />
-                  <input
-                    ref={locationRef}
-                    type="text"
-                    // Kept short so it isn't clipped by the Find Me button on a
-                    // narrow phone — a half-truncated placeholder reads as broken.
-                    placeholder={
-                      quoteData.timing === 'now' ? 'Postcode or street' : 'Where shall we meet?'
-                    }
-                    className="w-full pl-11 sm:pl-12 pr-[96px] sm:pr-[110px] py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
-                    value={quoteData.location}
-                    onChange={(e) => setQuoteData({ ...quoteData, location: e.target.value })}
-                    aria-label="Pickup location"
-                  />
                   <button
                     type="button"
                     onClick={handleGetLocation}
@@ -399,7 +411,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     )}
                     <span className="uppercase tracking-tight">Find Me</span>
                   </button>
-                </div>
+                </PlaceInput>
                 <div className="relative">
                   <Phone className="absolute left-4 top-[14px] w-5 h-5 text-neutral-400 pointer-events-none" />
                   <input
@@ -480,17 +492,18 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   <ChevronDown className="absolute right-4 top-4 w-5 h-5 text-neutral-400 pointer-events-none" />
                 </div>
                 {needsDestination && (
-                  <div className="relative">
-                    <Navigation className="absolute left-4 top-[14px] w-5 h-5 text-neutral-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="Where do you need to go? (Drop-off)"
-                      className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
-                      value={quoteData.destination}
-                      onChange={(e) => setQuoteData({ ...quoteData, destination: e.target.value })}
-                      aria-label="Drop-off location"
-                    />
-                  </div>
+                  <PlaceInput
+                    value={quoteData.destination}
+                    onChange={(destination, pin) => {
+                      setQuoteData({ ...quoteData, destination });
+                      setDropoffPin(pin);
+                    }}
+                    placeholder="Where do you need to go? (Drop-off)"
+                    ariaLabel="Drop-off location"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                  >
+                    <Navigation className="absolute left-4 w-5 h-5 text-neutral-400 pointer-events-none" />
+                  </PlaceInput>
                 )}
 
                 {quoteData.service && (

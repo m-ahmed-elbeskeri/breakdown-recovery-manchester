@@ -70,9 +70,17 @@ def _link(label: str, href: str) -> str:
     )
 
 
+# What the customer was told when no price could be calculated. The site
+# promises "We'll confirm your exact price on the call", so the alert has to
+# say a price is owed rather than showing a bare dash the operator could read
+# as a glitch — they are the one who has to keep that promise.
+NEEDS_QUOTE = "Quote on call"
+
+
 def render_booking_email(b: BookingDetails) -> tuple[str, str]:
     """Return (subject, html) for a booking alert."""
-    price = f"£{b['price']}" if b["price"] is not None else "—"
+    has_price = b["price"] is not None
+    price = f"£{b['price']}" if has_price else NEEDS_QUOTE
     when = "ASAP (now)" if b["timing"] == "now" else f"Scheduled: {b['scheduled_for']}"
     journey = (
         f"{b['distance_miles']} mi · ~{b['duration_minutes']} min"
@@ -101,7 +109,14 @@ def render_booking_email(b: BookingDetails) -> tuple[str, str]:
         ("Drop-off", destination_cell),
         ("Phone", _link(b["phone"], tel_uri(b["phone"]))),
         ("Tow distance", escape(journey)),
-        ("Quoted price", escape(price)),
+        (
+            "Quoted price",
+            escape(price)
+            if has_price
+            else f'<span style="color:#c0392b">{escape(price)}</span>'
+            '<br><span style="color:#6b7280;font-size:12px">'
+            "customer was told you would confirm the price by phone</span>",
+        ),
         ("Region", escape(b["region"])),
         ("Booking #", str(b["id"])),
     ]
