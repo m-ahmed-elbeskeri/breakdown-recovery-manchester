@@ -48,6 +48,33 @@ describe('estimatePrice — tow jobs', () => {
   });
 });
 
+describe('estimatePrice — empty running', () => {
+  it('does not charge for empty miles inside the free allowance', () => {
+    const near = estimatePrice({ service: 'jumpstart', deadheadMiles: 10 });
+    expect(near).toBe(estimatePrice({ service: 'jumpstart' }));
+  });
+
+  it('charges a distant roadside job for the miles beyond the allowance', () => {
+    // 40 empty miles: 24 chargeable at £1.50 = £36 on top of the £45 flat fee.
+    expect(estimatePrice({ service: 'jumpstart', deadheadMiles: 40 })).toBe(80);
+  });
+
+  it('adds empty running to a tow on top of the loaded miles', () => {
+    // £45 callout + 10 loaded × £2.90 = £74, plus 14 chargeable empty × £1.50 = £21.
+    expect(estimatePrice({ service: 'towing', distanceMiles: 10, deadheadMiles: 30 })).toBe(95);
+  });
+
+  it('prices a short tow far from base above a short tow next door', () => {
+    const nearby = estimatePrice({ service: 'towing', distanceMiles: 2, deadheadMiles: 6 });
+    const distant = estimatePrice({ service: 'towing', distanceMiles: 2, deadheadMiles: 60 });
+    expect(distant).toBeGreaterThan(nearby!);
+  });
+
+  it('still returns null for a tow whose distance is unknown', () => {
+    expect(estimatePrice({ service: 'towing', deadheadMiles: 30 })).toBeNull();
+  });
+});
+
 describe('formatPrice', () => {
   it('renders a single £ figure', () => {
     expect(formatPrice(75)).toBe('£75');

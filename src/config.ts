@@ -6,6 +6,14 @@ export const PHONE_TEL = '+447442384141';
 export const PHONE_DISPLAY = '07442 384141';
 export const HOME_REGION = 'Manchester';
 
+/**
+ * Where the recovery trucks live. Every job starts and ends here, so this is
+ * what makes "empty running" (base → pickup, drop-off → base) chargeable: a
+ * two-mile tow twenty miles from base costs far more to serve than a two-mile
+ * tow next door, and quoting only the loaded miles hid that entirely.
+ */
+export const BASE_LOCATION = 'M6 5UA';
+
 /** The trading name. Used in titles, structured data and the copyright line. */
 export const BRAND_NAME = 'Recovery Mayte';
 

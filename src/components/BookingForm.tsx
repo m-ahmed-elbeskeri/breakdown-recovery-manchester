@@ -22,7 +22,7 @@ import { CountUp } from './motion';
 import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
 import { validateQuote, type QuoteData } from '../validation';
-import { estimateRoute, resolveLocation, type LatLng, type RouteEstimate } from '../route';
+import { estimateJourney, resolveLocation, type JourneyEstimate, type LatLng } from '../route';
 import { PlaceInput } from './PlaceInput';
 import { estimatePrice, isNightHour, formatPrice, FROM_PRICE } from '../pricing';
 
@@ -58,7 +58,7 @@ function PriceReveal({
   night,
 }: {
   price: number;
-  estimate: RouteEstimate | null;
+  estimate: JourneyEstimate | null;
   night: boolean;
 }) {
   return (
@@ -74,9 +74,9 @@ function PriceReveal({
           Your price{night ? ' · night rate' : ''}
         </div>
         <div className="text-[11px] text-neutral-400 font-medium mt-0.5">
-          {estimate ? (
+          {estimate && estimate.loadedMiles > 0 ? (
             <>
-              {estimate.distanceMiles} mi · ~{estimate.durationMinutes} min tow
+              {estimate.loadedMiles} mi · ~{estimate.loadedMinutes} min tow
             </>
           ) : (
             <>Roadside fix · no tow needed</>
@@ -114,7 +114,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // geocoding the text — the same behaviour as before autocomplete existed.
   const [pickupPin, setPickupPin] = useState<LatLng | null>(null);
   const [dropoffPin, setDropoffPin] = useState<LatLng | null>(null);
-  const [estimate, setEstimate] = useState<RouteEstimate | null>(null);
+  const [estimate, setEstimate] = useState<JourneyEstimate | null>(null);
   const [estimateStatus, setEstimateStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
     'idle',
   );
@@ -144,7 +144,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // and hears the reason, rather than it vanishing from the tab order.
   const missingDropoff = needsDestination && !dropoff;
   useEffect(() => {
-    if (formStep !== 2 || !needsDestination || pickup.length < 3 || dropoff.length < 3) {
+    // Runs for roadside jobs too: the truck still drives out and back, and
+    // those miles are chargeable, so a jump start needs a route just as a tow
+    // does. Only the drop-off leg is conditional.
+    const needsDropoffFirst = needsDestination && dropoff.length < 3;
+    if (formStep !== 2 || !quoteData.service || pickup.length < 3 || needsDropoffFirst) {
       setEstimate(null);
       setEstimateStatus('idle');
       return;
@@ -152,7 +156,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
     const controller = new AbortController();
     setEstimateStatus('loading');
     const timer = setTimeout(() => {
-      estimateRoute(pickupPin ?? pickup, dropoffPin ?? dropoff, controller.signal)
+      estimateJourney(
+        pickupPin ?? pickup,
+        needsDestination ? (dropoffPin ?? dropoff) : null,
+        controller.signal,
+      )
         .then((result) => {
           setEstimate(result);
           setEstimateStatus(result ? 'done' : 'error');
@@ -168,7 +176,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [formStep, needsDestination, pickup, dropoff, pickupPin, dropoffPin]);
+  }, [formStep, needsDestination, quoteData.service, pickup, dropoff, pickupPin, dropoffPin]);
 
   // Move focus to the first meaningful element of each step for keyboard/SR users.
   useEffect(() => {
@@ -191,7 +199,8 @@ export function BookingForm({ regionName }: { regionName: string }) {
       : isNightHour(new Date());
   const price = estimatePrice({
     service: quoteData.service,
-    distanceMiles: estimate?.distanceMiles,
+    distanceMiles: estimate?.loadedMiles,
+    deadheadMiles: estimate?.deadheadMiles,
     night: isNight,
   });
 
@@ -271,8 +280,8 @@ export function BookingForm({ regionName }: { regionName: string }) {
           quoteData.timing === 'later' && quoteData.scheduledFor
             ? quoteData.scheduledFor.toISOString()
             : undefined,
-        distanceMiles: estimate?.distanceMiles,
-        durationMinutes: estimate?.durationMinutes,
+        distanceMiles: estimate?.loadedMiles,
+        durationMinutes: estimate?.loadedMinutes,
         price: price ?? undefined,
       });
       setConfirmedEta(result.eta);

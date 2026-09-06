@@ -4,7 +4,9 @@
 // server — both free and keyless, which is fine for launch and low volume. For
 // production scale, swap `geocode` / the OSRM call for a keyed provider
 // (Mapbox, Google, OpenRouteService); nothing else in the app needs to change
-// because everything depends only on `estimateRoute`.
+// because everything depends only on `estimateJourney`.
+
+import { BASE_LOCATION } from './config';
 
 export interface LatLng {
   lat: number;
@@ -66,31 +68,63 @@ export type Place = string | LatLng;
 const asLatLng = (place: Place, signal?: AbortSignal): Promise<LatLng | null> =>
   typeof place === 'string' ? resolveLocation(place, signal) : Promise.resolve(place);
 
-/**
- * Driving distance + time from pickup to drop-off, or `null` if either place
- * can't be located or no route exists. Throws only on network/HTTP failure so
- * callers can distinguish "no result" from "couldn't reach the service".
- */
-export async function estimateRoute(
-  pickup: Place,
-  destination: Place,
-  signal?: AbortSignal,
-): Promise<RouteEstimate | null> {
-  const [from, to] = await Promise.all([asLatLng(pickup, signal), asLatLng(destination, signal)]);
-  if (!from || !to) return null;
+export interface JourneyEstimate {
+  /** Loaded tow, pickup → drop-off. Zero for a job fixed at the roadside. */
+  loadedMiles: number;
+  loadedMinutes: number;
+  /** Empty running: base → pickup, plus drop-off → base (or straight back). */
+  deadheadMiles: number;
+  deadheadMinutes: number;
+}
 
-  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
-  const res = await fetch(url, { signal });
+/**
+ * The whole truck movement for a job, not just the towed leg: out from base,
+ * the tow itself, and home again. Quoting only the loaded miles made a job on
+ * the far edge of the patch look identical to one round the corner.
+ *
+ * OSRM returns a leg per waypoint pair, so the entire round trip costs one
+ * request rather than three — which matters on a public demo server.
+ *
+ * Returns `null` if a place can't be located or no route exists; throws only on
+ * network/HTTP failure so callers can tell "no result" from "couldn't ask".
+ */
+export async function estimateJourney(
+  pickup: Place,
+  destination: Place | null,
+  signal?: AbortSignal,
+): Promise<JourneyEstimate | null> {
+  const [base, from, to] = await Promise.all([
+    resolveLocation(BASE_LOCATION, signal),
+    asLatLng(pickup, signal),
+    destination === null ? Promise.resolve(null) : asLatLng(destination, signal),
+  ]);
+  if (!base || !from) return null;
+  if (destination !== null && !to) return null;
+
+  // base → pickup → [drop-off →] base
+  const waypoints = to ? [base, from, to, base] : [base, from, base];
+  const path = waypoints.map((p) => `${p.lng},${p.lat}`).join(';');
+  const res = await fetch(
+    `https://router.project-osrm.org/route/v1/driving/${path}?overview=false`,
+    { signal },
+  );
   if (!res.ok) throw new Error(`routing failed (${res.status})`);
   const data = (await res.json()) as {
-    routes?: Array<{ distance: number; duration: number }>;
+    routes?: Array<{ legs?: Array<{ distance: number; duration: number }> }>;
   };
-  const route = data.routes?.[0];
-  if (!route) return null;
+  const legs = data.routes?.[0]?.legs;
+  if (!legs || legs.length !== waypoints.length - 1) return null;
+
+  // With a drop-off the middle leg is the tow; without one, every leg is empty.
+  const loaded = to ? legs[1] : null;
+  const empty = to ? [legs[0], legs[2]] : [legs[0], legs[1]];
+  const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
   return {
-    distanceMiles: Math.round(metersToMiles(route.distance) * 10) / 10,
-    durationMinutes: Math.max(1, Math.round(secondsToMinutes(route.duration))),
+    loadedMiles: loaded ? Math.round(metersToMiles(loaded.distance) * 10) / 10 : 0,
+    loadedMinutes: loaded ? Math.max(1, Math.round(secondsToMinutes(loaded.duration))) : 0,
+    deadheadMiles: Math.round(metersToMiles(sum(empty.map((l) => l.distance))) * 10) / 10,
+    deadheadMinutes: Math.max(1, Math.round(secondsToMinutes(sum(empty.map((l) => l.duration))))),
   };
 }
 
