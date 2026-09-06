@@ -17,7 +17,7 @@ import {
   Calendar,
 } from '../icons';
 import { PHONE_TEL, PHONE_DISPLAY } from '../config';
-import { SERVICE_OPTIONS } from '../data';
+import { SERVICE_OPTIONS, serviceNeedsDestination } from '../data';
 import { CountUp } from './motion';
 import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
@@ -44,9 +44,6 @@ const formatScheduledFor = (d: Date | null): string =>
         hour12: false,
       })
     : '';
-
-const serviceNeedsDestination = (service: string): boolean =>
-  SERVICE_OPTIONS.find((o) => o.value === service)?.needsDestination ?? true;
 
 const GEO_OPTIONS: PositionOptions = {
   enableHighAccuracy: false,
@@ -141,6 +138,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const needsDestination = serviceNeedsDestination(quoteData.service);
   const pickup = quoteData.location.trim();
   const dropoff = quoteData.destination.trim();
+  // A tow with nowhere to go can't be quoted or driven, so the button is held
+  // shut until there's a drop-off. The panel above it already says why, and
+  // aria-disabled keeps the button reachable so a screen reader still finds it
+  // and hears the reason, rather than it vanishing from the tab order.
+  const missingDropoff = needsDestination && !dropoff;
   useEffect(() => {
     if (formStep !== 2 || !needsDestination || pickup.length < 3 || dropoff.length < 3) {
       setEstimate(null);
@@ -231,6 +233,8 @@ export function BookingForm({ regionName }: { regionName: string }) {
   };
 
   const handleBookingSubmit = async () => {
+    // aria-disabled buttons still fire a click; the validator below is what
+    // actually stops the submit and names the missing field out loud.
     const error = validateQuote(quoteData, 'full');
     if (error) {
       setSubmitError(error);
@@ -513,7 +517,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   >
                     {needsDestination && dropoff.length < 3 ? (
                       <p className="w-full text-center text-[11px] text-neutral-400 font-medium">
-                        Add a drop-off to reveal your price
+                        Add a drop-off address to reveal your price
                       </p>
                     ) : estimateStatus === 'loading' ? (
                       <div className="w-full flex items-center justify-center gap-2 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
@@ -547,7 +551,12 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     type="button"
                     onClick={handleBookingSubmit}
                     disabled={submitting}
-                    className="flex-1 bg-yellow-400 hover:bg-yellow-300 disabled:bg-yellow-400/50 disabled:cursor-not-allowed text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm hover:shadow-md"
+                    aria-disabled={missingDropoff}
+                    className={`flex-1 bg-yellow-400 text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm ${
+                      missingDropoff
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-yellow-300 hover:shadow-md'
+                    } disabled:bg-yellow-400/50 disabled:cursor-not-allowed`}
                   >
                     {submitting ? (
                       <>

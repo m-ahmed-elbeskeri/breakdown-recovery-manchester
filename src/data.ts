@@ -181,6 +181,7 @@ export interface ServiceOption {
 
 export const SERVICE_OPTIONS: ServiceOption[] = [
   { value: 'towing', label: 'My car broke down (Need a Tow)', needsDestination: true },
+  { value: 'tow', label: 'I just need a tow', needsDestination: true },
   { value: 'jumpstart', label: 'My battery is dead (Jump Start)', needsDestination: false },
   { value: 'tyre', label: 'I have a flat tyre', needsDestination: false },
   { value: 'fuel', label: 'I ran out of fuel', needsDestination: false },
@@ -188,6 +189,15 @@ export const SERVICE_OPTIONS: ServiceOption[] = [
   { value: 'motorbike', label: 'My motorbike broke down', needsDestination: true },
   { value: 'other', label: "I'm not sure / Other", needsDestination: true },
 ];
+
+/**
+ * Whether a service requires a drop-off address. Unknown services default to
+ * `true`: a tow with nowhere to go is the costly mistake, so the safe guess is
+ * to ask. Shared by the form and the validator so the field that gets shown and
+ * the field that gets required can never disagree.
+ */
+export const serviceNeedsDestination = (service: string): boolean =>
+  SERVICE_OPTIONS.find((o) => o.value === service)?.needsDestination ?? true;
 
 export interface FaqItem {
   q: string;

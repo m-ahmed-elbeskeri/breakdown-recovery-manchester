@@ -65,6 +65,30 @@ describe('validateQuote — full phase', () => {
   });
 
   it('accepts a fully completed booking', () => {
-    expect(validateQuote({ ...base, service: 'towing' }, 'full')).toBeNull();
+    expect(
+      validateQuote({ ...base, service: 'towing', destination: 'Kwik Fit, Bury' }, 'full'),
+    ).toBeNull();
+  });
+
+  it('requires a drop-off for a tow', () => {
+    expect(validateQuote({ ...base, service: 'towing' }, 'full')).toMatch(/drop-off/i);
+  });
+
+  it('requires a drop-off for the standalone tow service', () => {
+    expect(validateQuote({ ...base, service: 'tow' }, 'full')).toMatch(/drop-off/i);
+  });
+
+  it('rejects a whitespace-only drop-off', () => {
+    expect(validateQuote({ ...base, service: 'tow', destination: '   ' }, 'full')).toMatch(
+      /drop-off/i,
+    );
+  });
+
+  it('does not require a drop-off for a roadside fix', () => {
+    expect(validateQuote({ ...base, service: 'jumpstart' }, 'full')).toBeNull();
+  });
+
+  it('requires a drop-off for an unrecognised service, erring on the safe side', () => {
+    expect(validateQuote({ ...base, service: 'mystery-service' }, 'full')).toMatch(/drop-off/i);
   });
 });
