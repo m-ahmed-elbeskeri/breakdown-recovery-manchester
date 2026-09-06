@@ -80,6 +80,52 @@ export const setJobStatus = (key: string, jobId: number, status: JobStatus, driv
     body: JSON.stringify({ status, driverId }),
   });
 
+export const deleteJob = (key: string, jobId: number) =>
+  fetch(`${API_BASE}/api/bookings/${jobId}`, {
+    method: 'DELETE',
+    headers: { 'x-api-key': key },
+  }).then((res) => {
+    if (!res.ok) throw new Error(`${res.status}`);
+  });
+
+/**
+ * How each status looks. Colour carries the state so a driver scanning the
+ * list sees what needs doing without reading a word: live work in hi-vis
+ * yellow, finished work green and receded, anything cancelled greyed out.
+ */
+export const STATUS_STYLE: Record<JobStatus, { label: string; border: string; chip: string }> = {
+  pending: {
+    label: 'Waiting',
+    border: 'border-neutral-700',
+    chip: 'bg-neutral-800 text-neutral-300',
+  },
+  accepted: {
+    label: 'Accepted',
+    border: 'border-[var(--color-navy-400)]',
+    chip: 'bg-[var(--color-navy-700)] text-white',
+  },
+  en_route: {
+    label: 'On the way',
+    border: 'border-yellow-400',
+    chip: 'bg-yellow-400 text-neutral-950',
+  },
+  on_scene: {
+    label: 'On scene',
+    border: 'border-yellow-400',
+    chip: 'bg-yellow-400 text-neutral-950',
+  },
+  complete: {
+    label: 'Done',
+    border: 'border-[var(--color-success)]',
+    chip: 'bg-[var(--color-success)] text-white',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    border: 'border-neutral-800',
+    chip: 'bg-neutral-800 text-neutral-500',
+  },
+};
+
 /** Google Maps link for a pickup — coordinates when we have them, else a search. */
 export function mapsUrl(job: Job): string {
   if (job.pickupLat !== null && job.pickupLng !== null) {

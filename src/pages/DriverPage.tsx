@@ -20,8 +20,11 @@ import {
   sendPosition,
   setAvailability,
   setJobStatus,
+  deleteJob,
+  STATUS_STYLE,
   type Driver,
   type Job,
+  type JobStatus,
 } from '../driver';
 import { BRAND_WORDMARK } from '../config';
 
@@ -30,14 +33,17 @@ const POSITION_INTERVAL_MS = 20_000;
 /** How often to re-read jobs, so a new booking appears without a refresh. */
 const POLL_MS = 15_000;
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Waiting',
-  accepted: 'Accepted',
-  en_route: 'On the way',
-  on_scene: 'On scene',
-  complete: 'Done',
-  cancelled: 'Cancelled',
-};
+/** What each tab shows. "Mine" is the default: it is what the driver is doing. */
+const FILTERS = [
+  { key: 'mine', label: 'Mine' },
+  { key: 'waiting', label: 'Waiting' },
+  { key: 'done', label: 'Done' },
+  { key: 'all', label: 'All' },
+] as const;
+
+type FilterKey = (typeof FILTERS)[number]['key'];
+
+const DONE: JobStatus[] = ['complete', 'cancelled'];
 
 export function DriverPage() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(DRIVER_KEY_STORAGE) ?? '');
@@ -51,6 +57,10 @@ export function DriverPage() {
   const [error, setError] = useState<string | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [filter, setFilter] = useState<FilterKey>('mine');
+  // Two taps to delete. A single button next to "Job done" on a phone in a
+  // moving cab is a job lost to a misplaced thumb.
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   const me = drivers.find((d) => d.id === meId) ?? null;
   const lastSent = useRef(0);
@@ -132,6 +142,19 @@ export function DriverPage() {
     }
   };
 
+  const remove = async (job: Job) => {
+    setBusy(true);
+    try {
+      await deleteJob(apiKey, job.id);
+      setConfirmDelete(null);
+      await load();
+    } catch {
+      setError('Could not delete that job. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // ── Key entry ────────────────────────────────────────────────────────────
   if (!apiKey) {
     return (
@@ -173,10 +196,21 @@ export function DriverPage() {
     );
   }
 
-  const myJobs = jobs.filter(
-    (j) => j.driverId === meId && !['complete', 'cancelled'].includes(j.status),
-  );
-  const openJobs = jobs.filter((j) => j.status === 'pending' && j.driverId === null);
+  const myJobs = jobs.filter((j) => j.driverId === meId && !DONE.includes(j.status));
+
+  const counts = {
+    mine: myJobs.length,
+    waiting: jobs.filter((j) => j.status === 'pending' && j.driverId === null).length,
+    done: jobs.filter((j) => DONE.includes(j.status)).length,
+    all: jobs.length,
+  };
+
+  const visible = jobs.filter((j) => {
+    if (filter === 'mine') return j.driverId === meId && !DONE.includes(j.status);
+    if (filter === 'waiting') return j.status === 'pending' && j.driverId === null;
+    if (filter === 'done') return DONE.includes(j.status);
+    return true;
+  });
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white pb-16">
@@ -251,33 +285,51 @@ export function DriverPage() {
           ) : null}
         </section>
 
-        {/* ── The job in hand ─────────────────────────────────────────── */}
-        {myJobs.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-              Your job{myJobs.length > 1 ? 's' : ''}
-            </h2>
-            {myJobs.map((job) => (
-              <JobCard key={job.id} job={job} onAdvance={advance} busy={busy} mine />
-            ))}
-          </section>
-        )}
+        {/* ── Jobs ────────────────────────────────────────────────────── */}
+        <nav className="flex gap-1" aria-label="Filter jobs">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              aria-pressed={filter === f.key}
+              className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider border-2 transition-colors ${
+                filter === f.key
+                  ? 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+            >
+              {f.label}
+              <span className="ml-1.5 opacity-60">{counts[f.key]}</span>
+            </button>
+          ))}
+        </nav>
 
-        {/* ── Waiting ─────────────────────────────────────────────────── */}
-        <section className="flex flex-col gap-3">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-            Waiting {openJobs.length > 0 && `(${openJobs.length})`}
-          </h2>
-          {openJobs.length === 0 ? (
-            <p className="text-neutral-500 text-sm border-2 border-neutral-900 px-4 py-6 text-center">
-              No jobs waiting.
+        <div className="flex flex-col gap-3">
+          {visible.length === 0 ? (
+            <p className="text-neutral-500 text-sm border-2 border-neutral-900 px-4 py-8 text-center">
+              {filter === 'mine'
+                ? 'You have no jobs on. Check Waiting.'
+                : filter === 'waiting'
+                  ? 'No jobs waiting.'
+                  : 'Nothing here yet.'}
             </p>
           ) : (
-            openJobs.map((job) => (
-              <JobCard key={job.id} job={job} onAdvance={advance} busy={busy} />
+            visible.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onAdvance={advance}
+                onDelete={remove}
+                confirming={confirmDelete === job.id}
+                onConfirmDelete={() => setConfirmDelete(job.id)}
+                onCancelDelete={() => setConfirmDelete(null)}
+                busy={busy}
+                mine={job.driverId === meId}
+              />
             ))
           )}
-        </section>
+        </div>
       </div>
     </main>
   );
@@ -286,36 +338,52 @@ export function DriverPage() {
 function JobCard({
   job,
   onAdvance,
+  onDelete,
+  confirming,
+  onConfirmDelete,
+  onCancelDelete,
   busy,
   mine = false,
 }: {
   job: Job;
   onAdvance: (job: Job) => void;
+  onDelete: (job: Job) => void;
+  confirming: boolean;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
   busy: boolean;
   mine?: boolean;
 }) {
   const step = NEXT_STATUS[job.status];
+  const style = STATUS_STYLE[job.status];
+  const finished = job.status === 'complete' || job.status === 'cancelled';
+
   return (
-    <article
-      className={`border-2 ${mine ? 'border-yellow-400' : 'border-neutral-800'} bg-neutral-900`}
-    >
-      {job.motorway && (
+    <article className={`border-2 ${style.border} bg-neutral-900 ${finished ? 'opacity-60' : ''}`}>
+      {job.motorway && !finished && (
         <p className="bg-[var(--color-danger)] text-white text-[11px] font-black uppercase tracking-wider px-4 py-2">
           ⚠ Motorway · live carriageway procedure
         </p>
       )}
       <div className="p-4 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="font-bold">{job.service}</div>
-            <div className="text-xs text-neutral-400 font-medium mt-0.5">
-              {STATUS_LABEL[job.status]} · #{job.id}
-              {job.timing === 'later' && job.scheduledFor
-                ? ` · scheduled ${new Date(job.scheduledFor).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
-                : ''}
+          <div className="min-w-0">
+            <div className="font-bold truncate">{job.service}</div>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 ${style.chip}`}
+              >
+                {style.label}
+              </span>
+              <span className="text-xs text-neutral-500 font-medium">
+                #{job.id}
+                {mine && !finished ? ' · yours' : ''}
+              </span>
             </div>
           </div>
-          <div className="font-display text-2xl text-yellow-400 leading-none shrink-0">
+          <div
+            className={`font-display text-2xl leading-none shrink-0 ${finished ? 'text-neutral-500' : 'text-yellow-400'}`}
+          >
             {job.price !== null ? `£${job.price}` : '—'}
           </div>
         </div>
@@ -368,26 +436,59 @@ function JobCard({
           )}
         </dl>
 
-        <div className="flex gap-2">
-          <a
-            href={mapsUrl(job)}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 text-center bg-neutral-800 text-white font-display py-3 uppercase tracking-wider text-sm"
-          >
-            Navigate
-          </a>
-          {step && (
+        {confirming ? (
+          <div className="flex gap-2 items-center">
+            <span className="text-[11px] font-bold text-[var(--color-danger-soft)] flex-1">
+              Delete #{job.id} for good?
+            </span>
             <button
               type="button"
-              onClick={() => onAdvance(job)}
-              disabled={busy}
-              className="flex-1 bg-yellow-400 text-neutral-950 font-display py-3 uppercase tracking-wider text-sm disabled:opacity-50"
+              onClick={onCancelDelete}
+              className="px-4 py-2.5 bg-neutral-800 text-white font-display uppercase tracking-wider text-xs"
             >
-              {step.label}
+              Keep
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={() => onDelete(job)}
+              disabled={busy}
+              className="px-4 py-2.5 bg-[var(--color-danger)] text-white font-display uppercase tracking-wider text-xs disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            {!finished && (
+              <a
+                href={mapsUrl(job)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 text-center bg-neutral-800 text-white font-display py-3 uppercase tracking-wider text-sm"
+              >
+                Navigate
+              </a>
+            )}
+            {step && (
+              <button
+                type="button"
+                onClick={() => onAdvance(job)}
+                disabled={busy}
+                className="flex-1 bg-yellow-400 text-neutral-950 font-display py-3 uppercase tracking-wider text-sm disabled:opacity-50"
+              >
+                {step.label}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onConfirmDelete}
+              aria-label={`Delete job ${job.id}`}
+              className="px-4 py-3 border-2 border-neutral-800 text-neutral-500 hover:text-[var(--color-danger-soft)] hover:border-[var(--color-danger-soft)] font-display uppercase tracking-wider text-sm"
+            >
+              Del
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );

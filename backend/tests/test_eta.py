@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app import models
+from app.config import settings
 from app.eta import POSITION_MAX_AGE_MINUTES, position_is_fresh
 
 
@@ -38,6 +39,9 @@ def add_driver(session_factory):
             return driver.id
 
     return _add
+
+
+ADMIN = {"x-api-key": settings.admin_api_key}
 
 
 def booking_payload(**overrides):
@@ -131,3 +135,49 @@ def test_position_freshness_handles_naive_timestamps():
     """SQLite hands back naive datetimes; they must not raise."""
     naive = datetime.now(timezone.utc).replace(tzinfo=None)
     assert position_is_fresh(naive) is True
+
+
+# ── Deleting a job ──────────────────────────────────────────────────────────
+
+
+def test_delete_removes_the_job(client, add_driver):
+    add_driver()
+    created = client.post("/api/bookings", json=booking_payload(requestId="del-1")).json()
+    res = client.delete(
+        f"/api/bookings/{created['bookingId']}", headers=ADMIN
+    )
+    assert res.status_code == 204
+    remaining = client.get("/api/bookings", headers=ADMIN).json()
+    assert all(b["id"] != created["bookingId"] for b in remaining)
+
+
+def test_delete_needs_the_key(client, add_driver):
+    add_driver()
+    created = client.post("/api/bookings", json=booking_payload(requestId="del-2")).json()
+    assert client.delete(f"/api/bookings/{created['bookingId']}").status_code == 401
+
+
+def test_delete_frees_the_truck(client, add_driver):
+    """Deleting the job you were driving to must not leave you marked busy."""
+    driver_id = add_driver()
+    created = client.post("/api/bookings", json=booking_payload(requestId="del-3")).json()
+    job_id = created["bookingId"]
+    client.post(
+        f"/api/bookings/{job_id}/status",
+        json={"status": "en_route", "driverId": driver_id},
+        headers=ADMIN,
+    )
+    before = client.get("/api/drivers", headers=ADMIN).json()[0]
+    assert before["currentBookingId"] == job_id
+
+    client.delete(f"/api/bookings/{job_id}", headers=ADMIN)
+    after = client.get("/api/drivers", headers=ADMIN).json()[0]
+    assert after["currentBookingId"] is None
+    assert after["busyUntil"] is None
+
+
+def test_delete_unknown_job_is_404(client):
+    assert (
+        client.delete("/api/bookings/99999", headers=ADMIN).status_code
+        == 404
+    )

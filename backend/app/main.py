@@ -345,3 +345,34 @@ def set_booking_status(
     db.commit()
     db.refresh(booking)
     return _booking_out(booking)
+
+
+@app.delete(
+    "/api/bookings/{booking_id}",
+    status_code=204,
+    dependencies=[Depends(require_admin)],
+)
+def delete_booking(booking_id: int, db: Session = Depends(get_db)) -> None:
+    """Remove a job outright.
+
+    Deliberately a real delete rather than a status: a driver clearing a
+    duplicate or a test entry wants it gone from the list, not lingering as
+    another row to scroll past. Cancelling a genuine job is what the
+    "cancelled" status is for, and that keeps the record.
+
+    Frees the truck if this was the job in hand, so deleting the thing you were
+    driving to does not leave you marked busy for the next half hour.
+    """
+    booking = db.get(models.Booking, booking_id)
+    if booking is None:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    holder = db.scalars(
+        select(models.Driver).where(models.Driver.current_booking_id == booking.id)
+    ).first()
+    if holder is not None:
+        holder.current_booking_id = None
+        holder.busy_until = None
+
+    db.delete(booking)
+    db.commit()
