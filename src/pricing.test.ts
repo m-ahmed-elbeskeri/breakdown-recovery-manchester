@@ -6,6 +6,7 @@ import {
   CALLOUT_FEE,
   PER_MILE,
   NIGHT_MULTIPLIER,
+  MOTORWAY_SURCHARGE,
 } from './pricing';
 
 describe('isNightHour', () => {
@@ -21,10 +22,10 @@ describe('isNightHour', () => {
 
 describe('estimatePrice — roadside (flat fee) jobs', () => {
   it('prices a jump start at its flat fee, ignoring distance', () => {
-    expect(estimatePrice({ service: 'jumpstart' })).toBe(45);
+    expect(estimatePrice({ service: 'jumpstart' })).toBe(55);
   });
   it('prices a tyre job', () => {
-    expect(estimatePrice({ service: 'tyre' })).toBe(55);
+    expect(estimatePrice({ service: 'tyre' })).toBe(95);
   });
 });
 
@@ -55,8 +56,8 @@ describe('estimatePrice — empty running', () => {
   });
 
   it('charges a distant roadside job for the miles beyond the allowance', () => {
-    // 40 empty miles: 24 chargeable at £1.50 = £36 on top of the £45 flat fee.
-    expect(estimatePrice({ service: 'jumpstart', deadheadMiles: 40 })).toBe(80);
+    // 40 empty miles: 24 chargeable at £1.50 = £36 on top of the £55 flat fee.
+    expect(estimatePrice({ service: 'jumpstart', deadheadMiles: 40 })).toBe(90);
   });
 
   it('adds empty running to a tow on top of the loaded miles', () => {
@@ -72,6 +73,25 @@ describe('estimatePrice — empty running', () => {
 
   it('still returns null for a tow whose distance is unknown', () => {
     expect(estimatePrice({ service: 'towing', deadheadMiles: 30 })).toBeNull();
+  });
+});
+
+describe('estimatePrice — motorway', () => {
+  it('adds the surcharge for a live carriageway', () => {
+    const normal = estimatePrice({ service: 'jumpstart' })!;
+    const motorway = estimatePrice({ service: 'jumpstart', motorway: true })!;
+    expect(motorway - normal).toBe(MOTORWAY_SURCHARGE);
+  });
+
+  it('compounds the night multiplier over the surcharge', () => {
+    // (£55 + £40) x 1.2 = £114 -> £115
+    expect(estimatePrice({ service: 'jumpstart', motorway: true, night: true })).toBe(115);
+  });
+
+  it('applies to tows as well as roadside jobs', () => {
+    const plain = estimatePrice({ service: 'towing', distanceMiles: 10 })!;
+    const mway = estimatePrice({ service: 'towing', distanceMiles: 10, motorway: true })!;
+    expect(mway).toBeGreaterThan(plain);
   });
 });
 

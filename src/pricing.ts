@@ -5,6 +5,7 @@
 //   Tow jobs:      callout fee + (loaded miles × per-mile rate)
 //   Roadside jobs: a flat attendance fee (jump start, tyre, out-of-fuel)
 //   Empty running: chargeable miles getting to the job and home again
+//   Motorway:      a surcharge for working a live carriageway
 //   Out-of-hours:  a night multiplier (22:00–06:00)
 // Rounded to a clean whole figure so the customer gets one confident price.
 
@@ -29,12 +30,29 @@ export const DEADHEAD_PER_MILE = 1.5;
  */
 export const FREE_DEADHEAD_MILES = 16;
 
-/** Flat attendance fees for jobs fixed at the roadside (no tow distance). */
+/**
+ * Flat attendance fees for jobs fixed at the roadside (no tow distance).
+ *
+ * Benchmarked against Manchester operators in 2026: mobile tyre fitting is
+ * quoted locally at £90-£120 and fuel delivery from £69, so the old £55 and £40
+ * were not "competitive" but roughly 40% under what customers already expect —
+ * cheap enough to read as amateur. All three now sit inside the local range
+ * rather than beneath it, in its lower half — still the value option in
+ * Manchester, without pricing the work below what it costs to turn up.
+ */
 export const ROADSIDE_FEES: Record<string, number> = {
-  jumpstart: 45,
-  tyre: 55,
-  fuel: 40,
+  jumpstart: 55,
+  tyre: 95,
+  fuel: 69,
 };
+
+/**
+ * Added for a breakdown on a motorway or its hard shoulder. Local operators
+ * charge £80-£150 for a motorway callout against £45-£80 for an ordinary one,
+ * because working a live carriageway means a different safety procedure, police
+ * or National Highways coordination, and real risk to the crew.
+ */
+export const MOTORWAY_SURCHARGE = 40;
 
 /**
  * The lowest figure any job can start at — the "from £X" anchor shown before a
@@ -60,6 +78,8 @@ export function estimatePrice(opts: {
   distanceMiles?: number;
   /** Empty miles for the round trip out of base and back. */
   deadheadMiles?: number;
+  /** Stranded on a motorway or hard shoulder. */
+  motorway?: boolean;
   night?: boolean;
 }): number | null {
   const flat = ROADSIDE_FEES[opts.service];
@@ -80,6 +100,10 @@ export function estimatePrice(opts: {
     base += Math.max(0, opts.deadheadMiles - FREE_DEADHEAD_MILES) * DEADHEAD_PER_MILE;
   }
 
+  if (opts.motorway) base += MOTORWAY_SURCHARGE;
+
+  // Night last, so it lifts the whole job: a motorway shout at 3am is the
+  // hardest and most dangerous work the business does.
   if (opts.night) base *= NIGHT_MULTIPLIER;
   return roundTo5(base);
 }

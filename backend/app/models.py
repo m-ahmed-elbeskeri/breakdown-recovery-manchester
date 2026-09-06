@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -30,6 +30,9 @@ class Booking(Base):
     # street name: "Church Street" is ambiguous, 53.4808/-2.2426 is not.
     pickup_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     pickup_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Live carriageway: changes the price, and changes how the crew approaches.
+    motorway: Mapped[bool] = mapped_column(Boolean, default=False)
 
     distance_miles: Mapped[float | None] = mapped_column(Float, nullable=True)
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)

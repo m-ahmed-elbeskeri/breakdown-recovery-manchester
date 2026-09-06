@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parseLatLng, metersToMiles, secondsToMinutes, estimateJourney } from './route';
+import {
+  parseLatLng,
+  metersToMiles,
+  secondsToMinutes,
+  estimateJourney,
+  detectMotorway,
+} from './route';
 
 describe('parseLatLng', () => {
   it('extracts coordinates from a "Current location (...)" string', () => {
@@ -126,5 +132,32 @@ describe('estimateJourney', () => {
     const result = await estimateJourney('53.47, -2.23', '53.471, -2.231');
     expect(result?.loadedMinutes).toBe(1);
     expect(result?.deadheadMinutes).toBe(1);
+  });
+});
+
+describe('detectMotorway', () => {
+  it('spots how a stranded driver actually describes a motorway', () => {
+    expect(detectMotorway('M60 J17')).toBe('M60');
+    expect(detectMotorway('M62 westbound near junction 12')).toBe('M62');
+    expect(detectMotorway('broken down on the M6 southbound')).toBe('M6');
+    expect(detectMotorway('hard shoulder, not sure where')).toBe('Motorway');
+  });
+
+  it('does NOT mistake a Manchester postcode for a motorway', () => {
+    // The whole trap: M-postcodes and motorway numbers look identical.
+    expect(detectMotorway('M60 1AB')).toBeNull();
+    expect(detectMotorway('M6 5UA')).toBeNull(); // the depot's own postcode
+    expect(detectMotorway('12 Deansgate, Manchester, M3 3WD')).toBeNull();
+    expect(detectMotorway('Kwik Fit, John Street, Bury, BL9 0NH')).toBeNull();
+  });
+
+  it('reads the road when a postcode sits alongside it', () => {
+    expect(detectMotorway('M60 J17, near M25 3AB')).toBe('M60');
+  });
+
+  it('ignores ordinary addresses and unknown M-roads', () => {
+    expect(detectMotorway('Piccadilly Gardens')).toBeNull();
+    expect(detectMotorway('')).toBeNull();
+    expect(detectMotorway('M999 industrial estate')).toBeNull();
   });
 });

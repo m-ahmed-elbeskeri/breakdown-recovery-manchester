@@ -16,6 +16,7 @@ class BookingCreate(BaseModel):
     scheduledFor: Optional[str] = None
     pickupLat: Optional[float] = Field(default=None, ge=-90, le=90)
     pickupLng: Optional[float] = Field(default=None, ge=-180, le=180)
+    motorway: bool = False
     distanceMiles: Optional[float] = None
     durationMinutes: Optional[int] = None
     price: Optional[int] = None
@@ -43,6 +44,7 @@ class BookingOut(BaseModel):
     scheduledFor: Optional[str]
     pickupLat: Optional[float]
     pickupLng: Optional[float]
+    motorway: bool
     distanceMiles: Optional[float]
     durationMinutes: Optional[int]
     price: Optional[int]

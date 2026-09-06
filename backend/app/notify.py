@@ -28,6 +28,7 @@ class BookingDetails(TypedDict):
     scheduled_for: str | None
     pickup_lat: float | None
     pickup_lng: float | None
+    motorway: bool
     distance_miles: float | None
     duration_minutes: int | None
     price: int | None
@@ -88,6 +89,9 @@ def render_booking_email(b: BookingDetails) -> tuple[str, str]:
         else "—"
     )
     subject = f"New booking · {b['service']} · {b['region']} · {price}"
+    if b.get("motorway"):
+        # Front of the subject line: the crew must know before they open it.
+        subject = f"⚠ MOTORWAY · {subject}"
     # The pickup is the one field the driver acts on, so it is a live map link
     # rather than text to re-type into a phone at the side of a road. Every
     # other customer-supplied value is escaped: these strings are free text
@@ -128,6 +132,15 @@ def render_booking_email(b: BookingDetails) -> tuple[str, str]:
     # Two thumb-sized buttons above the detail table: this alert is read on a
     # phone, usually in a hurry, and the only two things the operator ever does
     # next are ring the customer and start driving to them.
+    warning = (
+        '<div style="background:#c0392b;color:#fff;padding:12px 16px;margin:0 0 16px;'
+        'font-weight:700;border-radius:4px">⚠ MOTORWAY / HARD SHOULDER — live carriageway '
+        'procedure, high-visibility, and National Highways or police notification before '
+        'attending.</div>'
+        if b.get("motorway")
+        else ""
+    )
+
     buttons = (
         '<div style="margin:0 0 20px">'
         f'<a href="{escape(pin, quote=True)}" '
@@ -144,6 +157,7 @@ def render_booking_email(b: BookingDetails) -> tuple[str, str]:
     html = (
         '<div style="font-family:system-ui,Arial,sans-serif">'
         '<h2 style="margin:0 0 12px">🚨 New recovery booking</h2>'
+        f"{warning}"
         f"{buttons}"
         f'<table style="border-collapse:collapse">{body}</table>'
         '<p style="color:#6b7280;font-size:12px;margin-top:16px">'

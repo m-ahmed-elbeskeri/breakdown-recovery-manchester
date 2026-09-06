@@ -229,3 +229,91 @@ export async function suggestPlaces(
     return [];
   }
 }
+
+// ── Motorway detection ──────────────────────────────────────────────────────
+//
+// Someone stranded on a motorway almost always says so — "M60 J17", "M62
+// westbound", "hard shoulder". That is worth spotting, because a live
+// carriageway is a different job: different safety procedure, National
+// Highways involvement, and a surcharge every local operator applies.
+//
+// The trap is that Manchester postcodes are indistinguishable from motorway
+// numbers at a glance. "M60 1AB" is a postcode in Prestwich; the depot itself
+// is "M6 5UA". Charging someone £40 extra because their postcode starts with M
+// would be indefensible, so a designation followed by a postcode's inward code
+// (digit + two letters) is never treated as a road.
+
+/** Motorways in and around Greater Manchester, plus the ones jobs run out to. */
+const MOTORWAYS = new Set([
+  'M6',
+  'M56',
+  'M60',
+  'M61',
+  'M62',
+  'M65',
+  'M66',
+  'M67',
+  'M602',
+  'M1',
+  'M5',
+  'M40',
+  'M42',
+  'M53',
+  'M55',
+  'M57',
+  'M58',
+  'M180',
+]);
+
+/** Full UK postcode anywhere in the text, e.g. "M60 1AB" or "BL9 0NH". */
+const POSTCODE = /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi;
+
+/**
+ * The motorway a pickup sits on, or `null`. Returns the designation ("M60") so
+ * the customer can be shown exactly what was detected rather than an
+ * unexplained surcharge appearing on their quote.
+ */
+export function detectMotorway(text: string): string | null {
+  if (!text) return null;
+  // Blank out anything that is unambiguously a postcode first, so its outward
+  // code can never be read as a road number.
+  const cleaned = text.replace(POSTCODE, ' ');
+
+  for (const match of cleaned.matchAll(/\bM\s?(\d{1,3})\b/gi)) {
+    const designation = `M${match[1]}`;
+    if (MOTORWAYS.has(designation.toUpperCase())) return designation.toUpperCase();
+  }
+  // No number, but the words are unambiguous on their own.
+  if (/\b(motorway|hard shoulder)\b/i.test(cleaned)) return 'Motorway';
+  return null;
+}
+
+/**
+ * Motorway lookup for a coordinate, for the "Find Me" path where the customer
+ * hands over GPS and never types a road name at all — precisely the person
+ * least able to describe where they are. Best-effort: returns null on any
+ * failure rather than throwing, since this only adjusts a price.
+ */
+export async function detectMotorwayAt(
+  { lat, lng }: LatLng,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${PHOTON_URL.replace('/api/', '/reverse')}?lat=${lat}&lon=${lng}&limit=1`,
+      { signal, headers: { Accept: 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      features?: Array<{ properties?: PhotonProps & { osm_value?: string } }>;
+    };
+    const props = data.features?.[0]?.properties;
+    if (!props) return null;
+    if (props.osm_value === 'motorway' || props.osm_value === 'motorway_link') {
+      return detectMotorway(props.name ?? '') ?? 'Motorway';
+    }
+    return detectMotorway(props.name ?? '');
+  } catch {
+    return null;
+  }
+}

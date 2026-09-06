@@ -17,6 +17,9 @@ export interface BookingArgs {
   distanceMiles?: number;
   /** Estimated tow driving time in minutes. */
   durationMinutes?: number;
+  /** Detected as a motorway / hard-shoulder job — surcharged, and the driver
+   *  needs to know before setting off. */
+  motorway?: boolean;
   /** Indicative quoted price shown to the customer (in £). */
   price?: number;
 }

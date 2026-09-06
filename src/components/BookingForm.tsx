@@ -15,6 +15,7 @@ import {
   PhoneCall,
   ShieldCheck,
   Calendar,
+  AlertTriangle,
 } from '../icons';
 import { PHONE_TEL, PHONE_DISPLAY } from '../config';
 import { SERVICE_OPTIONS, serviceNeedsDestination } from '../data';
@@ -22,9 +23,22 @@ import { CountUp } from './motion';
 import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
 import { validateQuote, type QuoteData } from '../validation';
-import { estimateJourney, resolveLocation, type JourneyEstimate, type LatLng } from '../route';
+import {
+  detectMotorway,
+  detectMotorwayAt,
+  estimateJourney,
+  resolveLocation,
+  type JourneyEstimate,
+  type LatLng,
+} from '../route';
 import { PlaceInput } from './PlaceInput';
-import { estimatePrice, isNightHour, formatPrice, FROM_PRICE } from '../pricing';
+import {
+  estimatePrice,
+  isNightHour,
+  formatPrice,
+  FROM_PRICE,
+  MOTORWAY_SURCHARGE,
+} from '../pricing';
 
 const defaultScheduledDate = (): Date => {
   const t = new Date();
@@ -114,6 +128,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // geocoding the text — the same behaviour as before autocomplete existed.
   const [pickupPin, setPickupPin] = useState<LatLng | null>(null);
   const [dropoffPin, setDropoffPin] = useState<LatLng | null>(null);
+  // Motorway detected from the coordinates, for the "Find Me" path where the
+  // customer never types a road name. The typed text is checked synchronously.
+  const [motorwayAtPin, setMotorwayAtPin] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<JourneyEstimate | null>(null);
   const [estimateStatus, setEstimateStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
     'idle',
@@ -178,6 +195,18 @@ export function BookingForm({ regionName }: { regionName: string }) {
     };
   }, [formStep, needsDestination, quoteData.service, pickup, dropoff, pickupPin, dropoffPin]);
 
+  useEffect(() => {
+    if (!pickupPin || detectMotorway(quoteData.location)) {
+      setMotorwayAtPin(null);
+      return;
+    }
+    const controller = new AbortController();
+    void detectMotorwayAt(pickupPin, controller.signal).then((found) => {
+      if (!controller.signal.aborted) setMotorwayAtPin(found);
+    });
+    return () => controller.abort();
+  }, [pickupPin, quoteData.location]);
+
   // Move focus to the first meaningful element of each step for keyboard/SR users.
   useEffect(() => {
     const target =
@@ -197,10 +226,15 @@ export function BookingForm({ regionName }: { regionName: string }) {
         ? isNightHour(quoteData.scheduledFor)
         : false
       : isNightHour(new Date());
+  // What the customer typed wins: "M60 J17" is a clearer statement of where
+  // they are than a reverse-geocode of a coordinate on a slip road.
+  const motorway = detectMotorway(quoteData.location) ?? motorwayAtPin;
+
   const price = estimatePrice({
     service: quoteData.service,
     distanceMiles: estimate?.loadedMiles,
     deadheadMiles: estimate?.deadheadMiles,
+    motorway: motorway !== null,
     night: isNight,
   });
 
@@ -282,6 +316,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
             : undefined,
         distanceMiles: estimate?.loadedMiles,
         durationMinutes: estimate?.loadedMinutes,
+        motorway: motorway !== null,
         price: price ?? undefined,
       });
       setConfirmedEta(result.eta);
@@ -517,6 +552,32 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   >
                     <Navigation className="absolute left-4 w-5 h-5 text-neutral-400 pointer-events-none" />
                   </PlaceInput>
+                )}
+
+                {motorway !== null && (
+                  // Shown whenever the surcharge applies, so the customer is
+                  // never charged £40 they can't account for — and, far more
+                  // importantly, because a hard shoulder kills people. Anyone
+                  // who tells us they are on a motorway gets told to get out
+                  // and get behind the barrier before anything about price.
+                  <div
+                    role="alert"
+                    className="rounded-none border-2 border-yellow-400 bg-yellow-400/10 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-2 text-yellow-400 font-black text-[11px] uppercase tracking-[0.15em]">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      {motorway} · Motorway recovery
+                    </div>
+                    <p className="text-neutral-200 text-[11px] font-medium leading-relaxed mt-2">
+                      <strong>Get out of the left-hand doors and stand behind the barrier</strong>,
+                      away from your vehicle. Don't attempt a repair on the hard shoulder. In
+                      immediate danger, call 999; otherwise National Highways on 0300 123 5000.
+                    </p>
+                    <p className="text-neutral-400 text-[11px] font-medium mt-2">
+                      Motorway callout includes a £{MOTORWAY_SURCHARGE} surcharge for working a live
+                      carriageway.
+                    </p>
+                  </div>
                 )}
 
                 {quoteData.service && (
