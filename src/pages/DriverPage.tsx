@@ -19,6 +19,7 @@ import {
   NEXT_STATUS,
   sendPosition,
   setAvailability,
+  setBusyMinutes,
   setJobStatus,
   deleteJob,
   STATUS_STYLE,
@@ -123,6 +124,24 @@ export function DriverPage() {
       lastSent.current = 0; // send a position immediately on coming on duty
     } catch {
       setError('Could not change your status. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Nudge the free-at time. The estimate made when a job was taken is a
+  // guess from mileage; the driver can see the recovery and knows whether it
+  // is another ten minutes or another hour. Every waiting customer's quoted
+  // wait is built on this number, so it is worth letting them correct it.
+  const nudgeBusy = async (delta: number) => {
+    if (!me) return;
+    const next = Math.max(0, Math.min(480, me.busyMinutes + delta));
+    setBusy(true);
+    try {
+      const updated = await setBusyMinutes(apiKey, me.id, next);
+      setDrivers((all) => all.map((d) => (d.id === updated.id ? updated : d)));
+    } catch {
+      setError('Could not update your free time. Try again.');
     } finally {
       setBusy(false);
     }
@@ -278,11 +297,53 @@ export function DriverPage() {
           {geoError && me?.available && (
             <p className="text-[var(--color-danger-soft)] text-xs font-bold mt-3">{geoError}</p>
           )}
-          {me?.busyMinutes ? (
-            <p className="text-xs text-neutral-400 font-medium mt-3 border-t border-neutral-800 pt-3">
-              Free again in about <strong className="text-yellow-400">{me.busyMinutes} min</strong>
-            </p>
-          ) : null}
+          {me && (
+            <div className="mt-3 border-t border-neutral-800 pt-3 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-xs text-neutral-400 font-medium">
+                {me.busyMinutes > 0 ? (
+                  <>
+                    Free again in about{' '}
+                    <strong className="text-yellow-400 font-display text-base">
+                      {me.busyMinutes} min
+                    </strong>
+                  </>
+                ) : (
+                  <>
+                    Free <strong className="text-yellow-400">now</strong>
+                  </>
+                )}
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void nudgeBusy(-15)}
+                  disabled={busy || me.busyMinutes === 0}
+                  aria-label="Fifteen minutes sooner"
+                  className="px-3 py-2 bg-neutral-800 text-white font-display text-xs uppercase tracking-wider disabled:opacity-40"
+                >
+                  −15
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void nudgeBusy(15)}
+                  disabled={busy}
+                  aria-label="Fifteen minutes longer"
+                  className="px-3 py-2 bg-neutral-800 text-white font-display text-xs uppercase tracking-wider disabled:opacity-40"
+                >
+                  +15
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void nudgeBusy(-me.busyMinutes)}
+                  disabled={busy || me.busyMinutes === 0}
+                  aria-label="I am free now"
+                  className="px-3 py-2 border-2 border-neutral-700 text-neutral-300 font-display text-xs uppercase tracking-wider disabled:opacity-40"
+                >
+                  Free now
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ── Jobs ────────────────────────────────────────────────────── */}

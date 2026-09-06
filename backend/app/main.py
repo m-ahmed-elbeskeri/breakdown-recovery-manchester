@@ -301,6 +301,14 @@ def set_driver_state(
     if payload.lat is not None and payload.lng is not None:
         driver.lat, driver.lng = payload.lat, payload.lng
         driver.located_at = datetime.now(timezone.utc)
+    if payload.busyMinutes is not None:
+        # The driver's own read on when they will be free beats the estimate
+        # made when they took the job. Zero means done — free right now.
+        driver.busy_until = (
+            datetime.now(timezone.utc) + timedelta(minutes=payload.busyMinutes)
+            if payload.busyMinutes > 0
+            else None
+        )
     db.commit()
     db.refresh(driver)
     return _driver_out(driver)

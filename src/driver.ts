@@ -74,6 +74,13 @@ export const sendPosition = (key: string, driverId: number, lat: number, lng: nu
     body: JSON.stringify({ lat, lng }),
   });
 
+/** Tell dispatch how much longer this driver expects to be. 0 clears it. */
+export const setBusyMinutes = (key: string, driverId: number, busyMinutes: number) =>
+  call<Driver>(`/api/drivers/${driverId}/state`, key, {
+    method: 'POST',
+    body: JSON.stringify({ busyMinutes }),
+  });
+
 export const setJobStatus = (key: string, jobId: number, status: JobStatus, driverId?: number) =>
   call<Job>(`/api/bookings/${jobId}/status`, key, {
     method: 'POST',

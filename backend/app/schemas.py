@@ -67,6 +67,11 @@ class DriverStateIn(BaseModel):
     available: Optional[bool] = None
     lat: Optional[float] = Field(default=None, ge=-90, le=90)
     lng: Optional[float] = Field(default=None, ge=-180, le=180)
+    # How much longer the driver reckons they will be. Overrides the estimate
+    # made when they took the job, because they can see the recovery and we
+    # cannot. 0 means free now. Capped at eight hours so a mistyped number
+    # cannot take a truck out of dispatch for a week.
+    busyMinutes: Optional[int] = Field(default=None, ge=0, le=480)
 
 
 class DriverOut(BaseModel):

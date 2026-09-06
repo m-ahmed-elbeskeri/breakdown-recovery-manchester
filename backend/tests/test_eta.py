@@ -222,3 +222,45 @@ def test_browser_may_post_and_get():
         for method in ("GET", "POST"):
             res = _preflight(c, method)
             assert res.status_code == 200, f"{method}: {res.text}"
+
+
+# ── The driver correcting their own free-at time ────────────────────────────
+
+
+def test_driver_can_set_how_long_they_will_be(client, add_driver):
+    driver_id = add_driver()
+    res = client.post(
+        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 45}, headers=ADMIN
+    )
+    assert res.status_code == 200, res.text
+    assert 43 <= res.json()["busyMinutes"] <= 45
+
+
+def test_driver_can_declare_themselves_free(client, add_driver):
+    driver_id = add_driver(busy_minutes=60)
+    res = client.post(
+        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 0}, headers=ADMIN
+    )
+    assert res.json()["busyMinutes"] == 0
+    assert res.json()["busyUntil"] is None
+
+
+def test_an_edited_free_time_reaches_the_customer_quote(client, add_driver):
+    """The whole point: a longer job means everyone behind it waits longer."""
+    driver_id = add_driver()
+    before = client.get("/api/eta", params={"lat": 53.4772, "lng": -2.2309}).json()
+
+    client.post(f"/api/drivers/{driver_id}/state", json={"busyMinutes": 90}, headers=ADMIN)
+    after = client.get("/api/eta", params={"lat": 53.4772, "lng": -2.2309}).json()
+
+    assert after["queueMinutes"] >= 88
+    assert after["etaMinutes"] > before["etaMinutes"]
+
+
+def test_busy_minutes_is_capped(client, add_driver):
+    """A mistyped number must not take a truck out of dispatch for a week."""
+    driver_id = add_driver()
+    res = client.post(
+        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 100000}, headers=ADMIN
+    )
+    assert res.status_code == 422
