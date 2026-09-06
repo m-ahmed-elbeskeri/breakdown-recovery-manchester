@@ -58,6 +58,16 @@ def drive_minutes(
     return max(1, round(miles / CRUDE_MPH * 60))
 
 
+def position_is_fresh(located_at: datetime | None) -> bool:
+    """Whether a reported position is recent enough to quote a wait from."""
+    if located_at is None:
+        return False
+    if located_at.tzinfo is None:
+        located_at = located_at.replace(tzinfo=timezone.utc)
+    age = (datetime.now(timezone.utc) - located_at).total_seconds() / 60
+    return age <= POSITION_MAX_AGE_MINUTES
+
+
 def minutes_until(when: datetime | None) -> int:
     """Whole minutes from now until `when`, never negative."""
     if when is None:

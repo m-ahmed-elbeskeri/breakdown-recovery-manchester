@@ -60,6 +60,9 @@ const formatScheduledFor = (d: Date | null): string =>
       })
     : '';
 
+/** How often to re-ask what the wait is, so availability stays current. */
+const ETA_POLL_MS = 15_000;
+
 const GEO_OPTIONS: PositionOptions = {
   enableHighAccuracy: false,
   timeout: 10_000,
@@ -211,19 +214,27 @@ export function BookingForm({ regionName }: { regionName: string }) {
     return () => controller.abort();
   }, [pickupPin, quoteData.location]);
 
-  // A real wait, measured from where the nearest free driver actually is. Only
-  // asked once we have a pin: an ETA to a half-typed street name would be
-  // worse than the honest average it replaces.
+  // A real wait, measured from where the nearest free driver actually is.
+  // Polled rather than asked once: a driver coming on or off duty changes the
+  // answer completely, and a customer sitting on this screen should see that
+  // within seconds rather than being told something that stopped being true
+  // while they typed their number.
   useEffect(() => {
     if (!pickupPin) {
       setLiveEta(null);
       return;
     }
     const controller = new AbortController();
-    void fetchEta(pickupPin.lat, pickupPin.lng, controller.signal).then((quote) => {
-      if (!controller.signal.aborted) setLiveEta(quote);
-    });
-    return () => controller.abort();
+    const ask = () =>
+      void fetchEta(pickupPin.lat, pickupPin.lng, controller.signal).then((quote) => {
+        if (!controller.signal.aborted) setLiveEta(quote);
+      });
+    ask();
+    const timer = setInterval(ask, ETA_POLL_MS);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
   }, [pickupPin]);
 
   // Move focus to the first meaningful element of each step for keyboard/SR users.
@@ -248,6 +259,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // What the customer typed wins: "M60 J17" is a clearer statement of where
   // they are than a reverse-geocode of a coordinate on a slip road.
   const motorway = detectMotorway(quoteData.location) ?? motorwayAtPin;
+
+  // The pickup as the customer would recognise it. Suggestions come back as
+  // long chains ("Kwik Fit, John Street, Fernhill, Bury, BL9 0LD"), which
+  // would swamp the sentence it sits in, so keep the leading parts only.
+  const shortPickup = pickup.split(',').slice(0, 2).join(',').trim() || 'your pickup';
 
   const price = estimatePrice({
     service: quoteData.service,
@@ -599,24 +615,48 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   </div>
                 )}
 
+                {liveEta && liveEta.driversOnDuty === 0 && (
+                  // Said plainly, but never as a dead end: the form still takes
+                  // the booking and the phone number is right there, because a
+                  // customer at the roadside being told "no" and nothing else
+                  // is a customer ringing somebody else.
+                  <div className="flex items-start gap-2.5 border-2 border-neutral-700 bg-neutral-900 px-4 py-3">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-neutral-500 mt-1" />
+                    <p className="text-[11px] font-medium text-neutral-300 leading-relaxed">
+                      <span className="font-black uppercase tracking-wider text-neutral-400">
+                        No drivers on duty right now
+                      </span>
+                      <br />
+                      Leave your details and we&apos;ll call you straight back — or ring{' '}
+                      <a href={`tel:${PHONE_TEL}`} className="font-bold text-yellow-400 underline">
+                        {PHONE_DISPLAY}
+                      </a>{' '}
+                      now.
+                    </p>
+                  </div>
+                )}
+
                 {liveEta && liveEta.source === 'driver' && liveEta.etaMinutes !== null && (
-                  // Only shown when it is genuinely measured. On the fallback
-                  // the site says nothing extra rather than dressing up an
-                  // average as a live figure.
-                  <div className="flex items-center gap-2.5 border-2 border-yellow-400 bg-yellow-400/10 px-4 py-2.5">
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  // Two genuinely different things to say. A free driver is a
+                  // reason to book now; everyone being mid-job is a longer wait
+                  // that reads as honest rather than slow once the reason is
+                  // given. Either way the pickup is named, so the number is
+                  // plainly an ETA to *their* location and not a generic claim.
+                  <div className="flex items-start gap-2.5 border-2 border-yellow-400 bg-yellow-400/10 px-4 py-3">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0 mt-1">
                       <span className="absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-60 motion-safe:animate-ping" />
                       <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-yellow-400" />
                     </span>
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-yellow-400">
-                      Driver on duty &middot; with you in about{' '}
-                      <span className="font-display text-sm">{liveEta.etaMinutes} min</span>
-                      {liveEta.queueMinutes > 0 && (
-                        <span className="text-neutral-400 normal-case tracking-normal font-medium">
-                          {' '}
-                          (finishing a job first)
-                        </span>
-                      )}
+                    <p className="text-[11px] font-medium text-neutral-200 leading-relaxed">
+                      <span className="font-black uppercase tracking-wider text-yellow-400">
+                        {liveEta.queueMinutes > 0 ? 'All drivers on a job' : 'Driver available now'}
+                      </span>
+                      <br />
+                      {liveEta.queueMinutes > 0 ? 'Next driver can be' : 'Can be'} with you at{' '}
+                      <span className="font-bold text-white">{shortPickup}</span> in about{' '}
+                      <span className="font-display text-base text-yellow-400">
+                        {liveEta.etaMinutes} min
+                      </span>
                     </p>
                   </div>
                 )}

@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 from .config import settings
 from .db import get_db
-from .eta import drive_minutes, estimate_finish_minutes, minutes_until
+from .eta import (
+    drive_minutes,
+    estimate_finish_minutes,
+    minutes_until,
+    position_is_fresh,
+)
 from .notify import BookingDetails, send_booking_notification
 
 app = FastAPI(title="Recovery Mayte API", version="1.0.0")
@@ -213,7 +218,8 @@ def best_eta(db: Session, lat: float | None, lng: float | None) -> tuple[int | N
 
     best: tuple[int, int] | None = None
     for d in on_duty:
-        if d.lat is None or d.lng is None:
+        # A position we have stopped receiving is not a position.
+        if d.lat is None or d.lng is None or not position_is_fresh(d.located_at):
             continue
         travel = drive_minutes(d.lat, d.lng, lat, lng)
         if travel is None:
