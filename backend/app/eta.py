@@ -22,6 +22,13 @@ OSRM = "https://router.project-osrm.org/route/v1/driving"
 CRUDE_MPH = 24.0
 MILES_PER_DEGREE_LAT = 69.0
 
+# How old a position may be before we stop trusting it. Mobile browsers suspend
+# background tabs, so a driver who locks their phone stops reporting within a
+# minute or two; without this the site would happily quote a wait measured from
+# where the truck was an hour ago. Past this we say we don't know, which is
+# worth more than a confident wrong number.
+POSITION_MAX_AGE_MINUTES = 6
+
 # Time on scene once the driver arrives — winching, strapping, paperwork.
 ON_SCENE_MINUTES = 25
 

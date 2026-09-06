@@ -215,27 +215,51 @@ export function BookingForm({ regionName }: { regionName: string }) {
   }, [pickupPin, quoteData.location]);
 
   // A real wait, measured from where the nearest free driver actually is.
+  //
+  // Resolves the pickup itself when the customer typed an address rather than
+  // picking one from the list — which is most of them. Requiring a chosen
+  // suggestion meant the ETA silently never appeared for anyone who just typed
+  // their postcode and carried on.
+  //
   // Polled rather than asked once: a driver coming on or off duty changes the
-  // answer completely, and a customer sitting on this screen should see that
-  // within seconds rather than being told something that stopped being true
-  // while they typed their number.
+  // answer completely, and someone sitting on this screen filling in a phone
+  // number should not be looking at a figure that stopped being true while
+  // they typed.
   useEffect(() => {
-    if (!pickupPin) {
+    if (pickup.length < 3) {
       setLiveEta(null);
       return;
     }
     const controller = new AbortController();
-    const ask = () =>
-      void fetchEta(pickupPin.lat, pickupPin.lng, controller.signal).then((quote) => {
-        if (!controller.signal.aborted) setLiveEta(quote);
-      });
-    ask();
-    const timer = setInterval(ask, ETA_POLL_MS);
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const run = async () => {
+      let at = pickupPin;
+      if (!at) {
+        try {
+          at = await resolveLocation(pickup, controller.signal);
+        } catch {
+          at = null;
+        }
+      }
+      if (!at || controller.signal.aborted) {
+        setLiveEta(null);
+        return;
+      }
+      const ask = () =>
+        void fetchEta(at.lat, at.lng, controller.signal).then((quote) => {
+          if (!controller.signal.aborted) setLiveEta(quote);
+        });
+      ask();
+      timer = setInterval(ask, ETA_POLL_MS);
+    };
+    void run();
+
     return () => {
       controller.abort();
-      clearInterval(timer);
+      if (timer) clearInterval(timer);
     };
-  }, [pickupPin]);
+  }, [pickupPin, pickup]);
 
   // Move focus to the first meaningful element of each step for keyboard/SR users.
   useEffect(() => {
