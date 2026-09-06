@@ -103,3 +103,55 @@ class EtaOut(BaseModel):
     etaMinutes: Optional[int]
     queueMinutes: int
     source: Literal["driver", "fallback"]
+
+
+# ── Telemetry ───────────────────────────────────────────────────────────────
+# Anonymous by construction. There is no field here for a phone number, an
+# address or a name, so none can arrive however the client is changed.
+
+
+class EventIn(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    sessionId: str = Field(min_length=1, max_length=40)
+    path: str = Field(max_length=120)
+    region: Optional[str] = Field(default=None, max_length=60)
+    device: Optional[str] = Field(default=None, max_length=20)
+    referrer: Optional[str] = Field(default=None, max_length=120)
+    # Small on purpose: a handful of numbers and short labels per event.
+    payload: Optional[dict] = None
+
+
+class EventBatch(BaseModel):
+    # Batched so a browser sends one request on unload rather than one per
+    # click. Capped so a bad actor cannot post a novel.
+    events: list[EventIn] = Field(min_length=1, max_length=50)
+
+
+class CountRow(BaseModel):
+    label: str
+    count: int
+
+
+class FunnelStep(BaseModel):
+    name: str
+    label: str
+    sessions: int
+    """Share of sessions that reached the first step."""
+    pctOfEntry: float
+
+
+class TelemetryOut(BaseModel):
+    days: int
+    sessions: int
+    events: int
+    bookings: int
+    callClicks: int
+    funnel: list[FunnelStep]
+    topRegions: list[CountRow]
+    services: list[CountRow]
+    devices: list[CountRow]
+    referrers: list[CountRow]
+    daily: list[CountRow]
+    quotesShown: int
+    avgQuote: Optional[float]
+    availabilityAtQuote: list[CountRow]

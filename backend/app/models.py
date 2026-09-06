@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -84,6 +84,44 @@ class Driver(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class Event(Base):
+    """One thing that happened on the site.
+
+    Deliberately anonymous. No phone number, no address, no name, no IP, no
+    cookie — a session id generated per browser tab is enough to follow one
+    visit through the funnel, and it dies with the tab. Under UK GDPR that
+    keeps this out of consent-banner territory, and it costs nothing analytically:
+    what the operator needs is which areas convert and where people give up,
+    not who they are.
+
+    `payload` is free-form per event type. Anything identifying is stripped
+    client-side before it is sent; the schema will not accept a key it does not
+    recognise either.
+    """
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # e.g. "page_view", "quote_shown", "call_clicked", "dispatch_requested".
+    name: Mapped[str] = mapped_column(String(40), index=True)
+    session_id: Mapped[str] = mapped_column(String(40), index=True)
+
+    # Where it happened. Region is the area page, which is the whole point of
+    # 36 of them: it answers which ones are worth the SEO effort.
+    path: Mapped[str] = mapped_column(String(120))
+    region: Mapped[str | None] = mapped_column(String(60), nullable=True, index=True)
+
+    # How they arrived and on what. Coarse on purpose: "mobile" not a user
+    # agent string, a referrer host not a full URL with its query string.
+    device: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    referrer: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, index=True
     )
 
 

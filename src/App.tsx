@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useParams, Link } from 'react-router-dom';
 import { motion, MotionConfig } from 'motion/react';
 import { ArrowRight, PhoneCall, CheckCircle2, Home, Phone, MapPin, Clock } from './icons';
@@ -17,6 +18,7 @@ import {
 import { TRUST_ITEMS } from './data';
 import { useRegionSeo } from './seo';
 import { MetricsProvider } from './metrics';
+import { setTelemetryRegion, startTelemetry, track } from './telemetry';
 import { scrollToBooking } from './ui';
 import { BookingForm } from './components/BookingForm';
 import { FeaturedServices, ServicesGrid } from './components/Services';
@@ -483,6 +485,14 @@ function LandingPage() {
 }
 
 function RegionLanding({ regionName }: { regionName: string }) {
+  // One page view per region, so the 36 area pages can be judged on the work
+  // they actually bring rather than on faith.
+  useEffect(() => {
+    startTelemetry();
+    setTelemetryRegion(regionName);
+    track('page_view');
+  }, [regionName]);
+
   useRegionSeo(regionName);
 
   return (

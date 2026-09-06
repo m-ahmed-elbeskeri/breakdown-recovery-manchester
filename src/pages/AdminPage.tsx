@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Home, Loader2, Phone, ShieldAlert } from '../icons';
 import { Logo } from '../components/Logo';
 import { API_BASE } from '../api';
+import { TelemetryPanel } from '../components/Telemetry';
 import { useNoIndex } from '../seo';
 
 interface AdminBooking {
@@ -37,12 +38,13 @@ const fmtTime = (iso: string) =>
 export function AdminPage() {
   useNoIndex();
   useEffect(() => {
-    document.title = 'Dispatch · Bookings | Admin';
+    document.title = 'Dispatch | Admin';
   }, []);
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(KEY_STORAGE) ?? '');
   const [input, setInput] = useState(apiKey);
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
   const [status, setStatus] = useState<Status>('idle');
+  const [tab, setTab] = useState<'bookings' | 'telemetry'>('bookings');
 
   const load = useCallback(async (key: string) => {
     if (!key) return;
@@ -124,6 +126,33 @@ export function AdminPage() {
       </div>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {!needsKey && (
+          <nav className="flex gap-1 mb-6" aria-label="Admin sections">
+            {(
+              [
+                ['bookings', 'Bookings'],
+                ['telemetry', 'Telemetry'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                aria-pressed={tab === key}
+                className={`px-4 py-2.5 text-[11px] font-black uppercase tracking-wider border-2 ${
+                  tab === key
+                    ? 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                    : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
+
+        {!needsKey && tab === 'telemetry' && <TelemetryPanel apiKey={apiKey} />}
+
         {needsKey ? (
           <form onSubmit={saveKey} className="max-w-md mx-auto mt-16 text-center">
             <ShieldAlert className="w-10 h-10 text-yellow-400 mx-auto mb-4" />
@@ -157,7 +186,7 @@ export function AdminPage() {
               View bookings
             </button>
           </form>
-        ) : (
+        ) : tab !== 'bookings' ? null : (
           <>
             <div className="flex items-center justify-between mb-5">
               <h1 className="font-display text-2xl text-white uppercase tracking-tight">

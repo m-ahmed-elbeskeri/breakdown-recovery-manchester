@@ -33,6 +33,7 @@ import {
 } from '../route';
 import { PlaceInput } from './PlaceInput';
 import { fetchEta, type EtaQuote } from '../eta';
+import { track } from '../telemetry';
 import {
   estimatePrice,
   isNightHour,
@@ -337,6 +338,16 @@ export function BookingForm({ regionName }: { regionName: string }) {
     );
   };
 
+  // Fired once when someone first engages with the form, so the funnel's
+  // second step counts people rather than keystrokes.
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (!startedRef.current && pickup.length >= 3) {
+      startedRef.current = true;
+      track('booking_started');
+    }
+  }, [pickup]);
+
   const goToStep2 = () => {
     const error = validateQuote(quoteData, 'contact');
     if (error) {
@@ -344,8 +355,26 @@ export function BookingForm({ regionName }: { regionName: string }) {
       return;
     }
     setSubmitError(null);
+    track('details_done', { timing: quoteData.timing });
     setFormStep(2);
   };
+
+  // What the customer was actually shown, and the conditions behind it: the
+  // question the operator has is whether a driver being on duty wins the job.
+  const quotedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (price === null || quotedRef.current === price) return;
+    quotedRef.current = price;
+    track('quote_shown', {
+      price,
+      service: quoteData.service,
+      night: isNight,
+      motorway: motorway !== null,
+      towMiles: estimate?.loadedMiles ?? null,
+      driverAvailable: liveEta?.source === 'driver',
+      etaMinutes: liveEta?.etaMinutes ?? null,
+    });
+  }, [price, quoteData.service, isNight, motorway, estimate, liveEta]);
 
   const handleBookingSubmit = async () => {
     // aria-disabled buttons still fire a click; the validator below is what
@@ -353,9 +382,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
     const error = validateQuote(quoteData, 'full');
     if (error) {
       setSubmitError(error);
+      track('form_error', { step: 'dispatch' });
       return;
     }
     setSubmitError(null);
+    track('dispatch_requested', { service: quoteData.service, price: price ?? null });
     setSubmitting(true);
 
     // Resolve the pickup to a map pin so the operator's alert can link straight
@@ -393,6 +424,13 @@ export function BookingForm({ regionName }: { regionName: string }) {
       });
       setConfirmedEta(result.eta);
       setDriverAssigned(result.etaSource === 'driver');
+      track('booking_confirmed', {
+        price: price ?? null,
+        service: quoteData.service,
+        etaMinutes: result.eta,
+        driverAssigned: result.etaSource === 'driver',
+        queued: result.mode === 'local',
+      });
       setConfirmedPrice(price);
       setFormStep(3);
     } catch (err) {

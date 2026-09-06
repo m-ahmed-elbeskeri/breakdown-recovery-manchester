@@ -388,3 +388,163 @@ def delete_booking(booking_id: int, db: Session = Depends(get_db)) -> None:
 
     db.delete(booking)
     db.commit()
+
+
+# ── Telemetry ───────────────────────────────────────────────────────────────
+
+# The booking funnel, in order. Names are what the client sends; labels are
+# what the operator reads. Kept here rather than in the client so the
+# dashboard's shape does not depend on a deployed browser agreeing with it.
+FUNNEL = [
+    ("page_view", "Landed on the site"),
+    ("booking_started", "Typed a pickup"),
+    ("details_done", "Gave a phone number"),
+    ("service_chosen", "Chose a service"),
+    ("quote_shown", "Saw a price"),
+    ("dispatch_requested", "Pressed dispatch"),
+    ("booking_confirmed", "Booking confirmed"),
+]
+
+
+@app.post("/api/events", status_code=204)
+def record_events(batch: schemas.EventBatch, db: Session = Depends(get_db)) -> None:
+    """Swallow a batch of anonymous events.
+
+    Returns 204 whatever happens short of a malformed body: analytics must
+    never be the reason a customer's browser reports an error, and a dropped
+    event costs a row in a chart.
+    """
+    db.add_all(
+        models.Event(
+            name=e.name[:40],
+            session_id=e.sessionId[:40],
+            path=e.path[:120],
+            region=e.region,
+            device=e.device,
+            referrer=e.referrer,
+            payload=e.payload,
+        )
+        for e in batch.events
+    )
+    db.commit()
+
+
+def _rows(db: Session, query) -> list[schemas.CountRow]:
+    return [schemas.CountRow(label=str(label), count=int(count)) for label, count in db.execute(query)]
+
+
+@app.get(
+    "/api/admin/telemetry",
+    response_model=schemas.TelemetryOut,
+    dependencies=[Depends(require_admin)],
+)
+def telemetry(days: int = 30, db: Session = Depends(get_db)) -> schemas.TelemetryOut:
+    days = max(1, min(365, days))
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    E = models.Event
+    recent = E.created_at >= since
+
+    sessions = db.scalar(select(func.count(func.distinct(E.session_id))).where(recent)) or 0
+    events = db.scalar(select(func.count()).select_from(E).where(recent)) or 0
+
+    # Funnel counted in sessions, not events: a customer who edits their
+    # pickup five times is one person getting to that step, not five.
+    per_step = dict(
+        db.execute(
+            select(E.name, func.count(func.distinct(E.session_id)))
+            .where(recent)
+            .group_by(E.name)
+        ).all()
+    )
+    entry = per_step.get("page_view", 0) or 0
+    funnel = [
+        schemas.FunnelStep(
+            name=name,
+            label=label,
+            sessions=int(per_step.get(name, 0) or 0),
+            pctOfEntry=round(100 * (per_step.get(name, 0) or 0) / entry, 1) if entry else 0.0,
+        )
+        for name, label in FUNNEL
+    ]
+
+    top_regions = _rows(
+        db,
+        select(E.region, func.count(func.distinct(E.session_id)))
+        .where(recent, E.region.is_not(None))
+        .group_by(E.region)
+        .order_by(func.count(func.distinct(E.session_id)).desc())
+        .limit(12),
+    )
+    devices = _rows(
+        db,
+        select(E.device, func.count(func.distinct(E.session_id)))
+        .where(recent, E.device.is_not(None))
+        .group_by(E.device)
+        .order_by(func.count(func.distinct(E.session_id)).desc()),
+    )
+    referrers = _rows(
+        db,
+        select(E.referrer, func.count(func.distinct(E.session_id)))
+        .where(recent, E.referrer.is_not(None))
+        .group_by(E.referrer)
+        .order_by(func.count(func.distinct(E.session_id)).desc())
+        .limit(10),
+    )
+    daily = _rows(
+        db,
+        select(func.date(E.created_at), func.count(func.distinct(E.session_id)))
+        .where(recent)
+        .group_by(func.date(E.created_at))
+        .order_by(func.date(E.created_at)),
+    )
+
+    call_clicks = (
+        db.scalar(select(func.count()).select_from(E).where(recent, E.name == "call_clicked")) or 0
+    )
+
+    # Quotes: what people are actually being shown, and what it was worth.
+    quote_rows = db.execute(
+        select(E.payload).where(recent, E.name == "quote_shown")
+    ).scalars().all()
+    prices = [
+        p["price"]
+        for p in quote_rows
+        if isinstance(p, dict) and isinstance(p.get("price"), (int, float))
+    ]
+    service_counts: dict[str, int] = {}
+    availability: dict[str, int] = {}
+    for p in quote_rows:
+        if not isinstance(p, dict):
+            continue
+        if isinstance(p.get("service"), str):
+            service_counts[p["service"]] = service_counts.get(p["service"], 0) + 1
+        # Whether anyone was on duty when the price was shown — the question
+        # behind "does having a driver on actually win work?"
+        key = "driver on duty" if p.get("driverAvailable") else "nobody on duty"
+        availability[key] = availability.get(key, 0) + 1
+
+    bookings = db.scalar(select(func.count()).select_from(models.Booking).where(
+        models.Booking.created_at >= since
+    )) or 0
+
+    to_rows = lambda d: [  # noqa: E731
+        schemas.CountRow(label=k, count=v)
+        for k, v in sorted(d.items(), key=lambda kv: -kv[1])
+    ]
+
+    return schemas.TelemetryOut(
+        days=days,
+        sessions=int(sessions),
+        events=int(events),
+        bookings=int(bookings),
+        callClicks=int(call_clicks),
+        funnel=funnel,
+        topRegions=top_regions,
+        services=to_rows(service_counts),
+        devices=devices,
+        referrers=referrers,
+        daily=daily,
+        quotesShown=len(quote_rows),
+        avgQuote=round(sum(prices) / len(prices), 2) if prices else None,
+        availabilityAtQuote=to_rows(availability),
+    )
