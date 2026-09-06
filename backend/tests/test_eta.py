@@ -181,3 +181,44 @@ def test_delete_unknown_job_is_404(client):
         client.delete("/api/bookings/99999", headers=ADMIN).status_code
         == 404
     )
+
+
+# ── CORS ────────────────────────────────────────────────────────────────────
+# The delete endpoint worked perfectly from curl and failed in the browser,
+# because allow_methods did not list DELETE and the preflight was refused.
+# curl ignores CORS; browsers do not. So assert on the preflight itself.
+
+
+def _preflight(client, method: str):
+    origin = settings.cors_origin_list[0]
+    return client.options(
+        "/api/bookings/1",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": method,
+            "Access-Control-Request-Headers": "x-api-key",
+        },
+    )
+
+
+def test_browser_may_delete_a_job():
+    """A method the console calls must survive the preflight, not just curl."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as c:
+        res = _preflight(c, "DELETE")
+    assert res.status_code == 200, res.text
+    assert "DELETE" in res.headers.get("access-control-allow-methods", "")
+
+
+def test_browser_may_post_and_get():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as c:
+        for method in ("GET", "POST"):
+            res = _preflight(c, method)
+            assert res.status_code == 200, f"{method}: {res.text}"

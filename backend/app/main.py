@@ -22,7 +22,9 @@ app = FastAPI(title="Recovery Mayte API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    # DELETE is here for the driver console clearing a job. Listed explicitly
+    # rather than "*" so adding a destructive method stays a deliberate act.
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
