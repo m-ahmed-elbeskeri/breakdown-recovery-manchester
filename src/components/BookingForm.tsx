@@ -32,6 +32,7 @@ import {
   type LatLng,
 } from '../route';
 import { PlaceInput } from './PlaceInput';
+import { fetchEta, type EtaQuote } from '../eta';
 import {
   estimatePrice,
   isNightHour,
@@ -131,6 +132,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // Motorway detected from the coordinates, for the "Find Me" path where the
   // customer never types a road name. The typed text is checked synchronously.
   const [motorwayAtPin, setMotorwayAtPin] = useState<string | null>(null);
+  // What the backend says the real wait is, once we know where the customer
+  // is. Null until asked, or whenever nobody is on duty to measure from.
+  const [liveEta, setLiveEta] = useState<EtaQuote | null>(null);
   const [estimate, setEstimate] = useState<JourneyEstimate | null>(null);
   const [estimateStatus, setEstimateStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
     'idle',
@@ -206,6 +210,21 @@ export function BookingForm({ regionName }: { regionName: string }) {
     });
     return () => controller.abort();
   }, [pickupPin, quoteData.location]);
+
+  // A real wait, measured from where the nearest free driver actually is. Only
+  // asked once we have a pin: an ETA to a half-typed street name would be
+  // worse than the honest average it replaces.
+  useEffect(() => {
+    if (!pickupPin) {
+      setLiveEta(null);
+      return;
+    }
+    const controller = new AbortController();
+    void fetchEta(pickupPin.lat, pickupPin.lng, controller.signal).then((quote) => {
+      if (!controller.signal.aborted) setLiveEta(quote);
+    });
+    return () => controller.abort();
+  }, [pickupPin]);
 
   // Move focus to the first meaningful element of each step for keyboard/SR users.
   useEffect(() => {
@@ -576,6 +595,28 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     <p className="text-neutral-400 text-[11px] font-medium mt-2">
                       Motorway callout includes a £{MOTORWAY_SURCHARGE} surcharge for working a live
                       carriageway.
+                    </p>
+                  </div>
+                )}
+
+                {liveEta && liveEta.source === 'driver' && liveEta.etaMinutes !== null && (
+                  // Only shown when it is genuinely measured. On the fallback
+                  // the site says nothing extra rather than dressing up an
+                  // average as a live figure.
+                  <div className="flex items-center gap-2.5 border-2 border-yellow-400 bg-yellow-400/10 px-4 py-2.5">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-60 motion-safe:animate-ping" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                    </span>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-yellow-400">
+                      Driver on duty &middot; with you in about{' '}
+                      <span className="font-display text-sm">{liveEta.etaMinutes} min</span>
+                      {liveEta.queueMinutes > 0 && (
+                        <span className="text-neutral-400 normal-case tracking-normal font-medium">
+                          {' '}
+                          (finishing a job first)
+                        </span>
+                      )}
                     </p>
                   </div>
                 )}
