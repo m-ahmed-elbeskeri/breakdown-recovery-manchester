@@ -16,7 +16,7 @@ import {
 } from './config';
 import { TRUST_ITEMS } from './data';
 import { useRegionSeo } from './seo';
-import { MetricsProvider, useMetrics } from './metrics';
+import { MetricsProvider } from './metrics';
 import { scrollToBooking } from './ui';
 import { BookingForm } from './components/BookingForm';
 import { FeaturedServices, ServicesGrid } from './components/Services';
@@ -31,7 +31,6 @@ const HERO_IMAGE =
   'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2000&q=80';
 
 function UrgencyBar({ regionName }: { regionName: string }) {
-  const { driversAvailable, isLive } = useMetrics();
   return (
     <>
       <div className="hazard-stripes h-2" aria-hidden="true" />
@@ -45,14 +44,7 @@ function UrgencyBar({ regionName }: { regionName: string }) {
         <span className="hidden sm:inline">
           FAST DISPATCH IN {regionName.toUpperCase()}{' '}
           <span className="mx-1.5 text-yellow-400/60">//</span>{' '}
-          {isLive ? (
-            <>
-              <span className="text-yellow-400 font-black">{driversAvailable} VEHICLES</span>{' '}
-              AVAILABLE NOW
-            </>
-          ) : (
-            <span className="text-yellow-400 font-black">VEHICLES AVAILABLE 24/7</span>
-          )}
+          <span className="text-yellow-400 font-black">VEHICLES AVAILABLE 24/7</span>
         </span>
       </div>
     </>
@@ -60,7 +52,11 @@ function UrgencyBar({ regionName }: { regionName: string }) {
 }
 
 function LiveBadge() {
-  const { driversAvailable, isLive } = useMetrics();
+  // Deliberately no driver count. The figure came from the simulated metrics
+  // feed, so "Live: 7 Drivers Available Now" was a number nobody had counted —
+  // and now that real availability exists, a stale invented one sitting beside
+  // it would be worse than none. Real availability is quoted where it can be
+  // acted on: as a wait to your own pickup, in the booking panel.
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -71,7 +67,7 @@ function LiveBadge() {
         <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-yellow-400 opacity-75"></span>
         <span className="relative inline-flex rounded-none h-3 w-3 bg-yellow-400"></span>
       </span>
-      {isLive ? `Live: ${driversAvailable} Drivers Available Now` : 'Recovery Drivers On Call 24/7'}
+      Recovery Drivers On Call 24/7
     </motion.div>
   );
 }

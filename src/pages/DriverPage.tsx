@@ -28,6 +28,7 @@ import {
   type JobStatus,
 } from '../driver';
 import { BRAND_WORDMARK } from '../config';
+import { InstallApp } from '../components/InstallApp';
 
 /** How often to push a new position while on duty. */
 const POSITION_INTERVAL_MS = 20_000;
@@ -92,6 +93,15 @@ export function DriverPage() {
   useEffect(() => {
     if (meId !== null) localStorage.setItem('driver_id', String(meId));
   }, [meId]);
+
+  // Registered here rather than site-wide: the offline shell exists for a
+  // driver in a signal blackspot, and nobody else needs a worker installed.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    void navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* an unregistered worker costs offline support, nothing else */
+    });
+  }, []);
 
   // Share location only while on duty. Throttled, because a phone reports
   // movement far more often than dispatch needs to know about it.
@@ -264,6 +274,8 @@ export function DriverPage() {
             {error}
           </p>
         )}
+
+        <InstallApp />
 
         {/* ── On duty ─────────────────────────────────────────────────── */}
         <section

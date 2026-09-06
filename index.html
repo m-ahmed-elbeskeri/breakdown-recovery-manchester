@@ -79,7 +79,17 @@
 
     <!-- Favicons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/logo.svg" />
+    <!-- iOS ignores SVG here; it needs a PNG at 180px. -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- Installable driver app. The manifest is scoped to /driver, so the
+         customer-facing pages are never offered as an app to install. -->
+    <link rel="manifest" href="/driver.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Mayte Driver" />
+    <!-- black-translucent lets the dark console run under the status bar. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <!-- Organization + LocalBusiness structured data -->
     <script type="application/ld+json">

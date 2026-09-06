@@ -32,7 +32,9 @@ describe('submitBooking', () => {
 
     const result = await submitBooking(post, args, { requestId: 'r1' });
 
-    expect(result).toEqual({ ok: true, eta: 18, mode: 'api' });
+    // etaSource defaults to 'fallback': this stub returns only an eta, and an
+    // ETA of unknown provenance must never be taken for a measured one.
+    expect(result).toEqual({ ok: true, eta: 18, etaSource: 'fallback', mode: 'api' });
     expect(post).toHaveBeenCalledTimes(1);
     expect(readPending()).toEqual([]);
   });
@@ -104,5 +106,21 @@ describe('flushPending', () => {
     await flushPending(post);
 
     expect(post).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'dup-key' }));
+  });
+});
+
+describe('submitBooking — where the ETA came from', () => {
+  it('passes through a measured ETA so the screen may claim a dispatch', async () => {
+    const post = vi.fn().mockResolvedValue({ eta: 11, etaSource: 'driver' });
+    const result = await submitBooking(post, args, { requestId: 'r-src-1' });
+    expect(result.etaSource).toBe('driver');
+  });
+
+  it('reports a queued booking as unmeasured', async () => {
+    // It never reached the server, so nobody has been dispatched.
+    const post = vi.fn().mockRejectedValue(new Error('offline'));
+    const result = await submitBooking(post, args, { requestId: 'r-src-2' });
+    expect(result.mode).toBe('local');
+    expect(result.etaSource).toBe('fallback');
   });
 });
