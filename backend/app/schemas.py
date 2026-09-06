@@ -25,6 +25,10 @@ class BookingCreate(BaseModel):
 class BookingCreated(BaseModel):
     bookingId: int
     eta: int
+    # Whether `eta` was measured from a driver's position or is the published
+    # average. The confirmation screen states an arrival time as fact, and it
+    # has no business doing that on the strength of an average.
+    etaSource: Literal["driver", "fallback"] = "fallback"
 
 
 class MetricsOut(BaseModel):

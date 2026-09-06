@@ -30,11 +30,16 @@ export type BookingPayload = BookingArgs & { requestId: string };
 export interface BookingResult {
   ok: boolean;
   eta: number;
+  /** `driver` = measured from a real position. Anything else is an average. */
+  etaSource: 'driver' | 'fallback';
   mode: 'api' | 'local';
 }
 
 /** Sends a booking to the backend. Injected so the queue logic is testable. */
-export type PostBooking = (payload: BookingPayload) => Promise<{ eta?: number }>;
+export type PostBooking = (payload: BookingPayload) => Promise<{
+  eta?: number;
+  etaSource?: 'driver' | 'fallback';
+}>;
 
 const FALLBACK_KEY = 'pending_bookings_v1';
 const SUBMIT_TIMEOUT_MS = 4000;
@@ -53,7 +58,7 @@ const postBooking: PostBooking = async (payload) => {
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`booking failed (${res.status})`);
-  return (await res.json()) as { eta?: number };
+  return (await res.json()) as { eta?: number; etaSource?: 'driver' | 'fallback' };
 };
 
 /** Read the queue of bookings awaiting delivery to the backend. */
@@ -79,6 +84,10 @@ const persistLocally = (payload: BookingPayload): void => {
 };
 
 const etaOf = (result: unknown): number => (result as { eta?: number } | null)?.eta ?? DEFAULT_ETA;
+
+/** Only "driver" counts as measured; anything else is the published average. */
+const etaSourceOf = (result: unknown): 'driver' | 'fallback' =>
+  (result as { etaSource?: string } | null)?.etaSource === 'driver' ? 'driver' : 'fallback';
 
 const submitWithTimeout = (
   post: PostBooking,
@@ -116,11 +125,16 @@ export async function submitBooking(
 
   try {
     const result = await submitWithTimeout(post, payload, timeoutMs);
-    return { ok: true, eta: etaOf(result), mode: 'api' };
+    return {
+      ok: true,
+      eta: etaOf(result),
+      etaSource: etaSourceOf(result),
+      mode: 'api',
+    };
   } catch (err) {
     console.warn('[booking] API submit failed, queued for retry:', err);
     persistLocally(payload);
-    return { ok: true, eta: DEFAULT_ETA, mode: 'local' };
+    return { ok: true, eta: DEFAULT_ETA, etaSource: 'fallback', mode: 'local' };
   }
 }
 

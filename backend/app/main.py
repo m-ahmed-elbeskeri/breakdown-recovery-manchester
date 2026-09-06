@@ -62,8 +62,10 @@ def create_booking(
     # real wait — drive time plus whatever is left of the job in front of them —
     # rather than the site-wide average.
     live, _queue = best_eta(db, payload.pickupLat, payload.pickupLng)
+    eta_source = "fallback"
     if live is not None:
         eta = live
+        eta_source = "driver"
 
     # Idempotency: a retry with the same requestId returns the original booking
     # (and does not re-notify).
@@ -71,7 +73,7 @@ def create_booking(
         select(models.Booking).where(models.Booking.request_id == payload.requestId)
     ).first()
     if existing is not None:
-        return schemas.BookingCreated(bookingId=existing.id, eta=eta)
+        return schemas.BookingCreated(bookingId=existing.id, eta=eta, etaSource=eta_source)
 
     booking = models.Booking(
         request_id=payload.requestId,
@@ -104,7 +106,7 @@ def create_booking(
         ).first()
         if existing is None:
             raise
-        return schemas.BookingCreated(bookingId=existing.id, eta=eta)
+        return schemas.BookingCreated(bookingId=existing.id, eta=eta, etaSource=eta_source)
 
     db.refresh(booking)
 
@@ -128,7 +130,7 @@ def create_booking(
     }
     background.add_task(send_booking_notification, details)
 
-    return schemas.BookingCreated(bookingId=booking.id, eta=eta)
+    return schemas.BookingCreated(bookingId=booking.id, eta=eta, etaSource=eta_source)
 
 
 def require_admin(x_api_key: str = Header(default="")) -> None:

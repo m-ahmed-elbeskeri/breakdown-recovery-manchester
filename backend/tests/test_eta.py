@@ -264,3 +264,33 @@ def test_busy_minutes_is_capped(client, add_driver):
         f"/api/drivers/{driver_id}/state", json={"busyMinutes": 100000}, headers=ADMIN
     )
     assert res.status_code == 422
+
+
+# ── The confirmation screen must know whether a driver was assigned ─────────
+
+
+def test_booking_reports_a_measured_eta_as_such(client, add_driver):
+    add_driver()
+    body = client.post("/api/bookings", json=booking_payload(requestId="src-1")).json()
+    assert body["etaSource"] == "driver"
+
+
+def test_booking_reports_a_fallback_when_nobody_is_on_duty(client):
+    """No driver means no dispatch — the screen must not claim one."""
+    body = client.post("/api/bookings", json=booking_payload(requestId="src-2")).json()
+    assert body["etaSource"] == "fallback"
+
+
+def test_booking_reports_a_fallback_when_the_position_is_stale(client, add_driver):
+    add_driver(age_minutes=POSITION_MAX_AGE_MINUTES + 5)
+    body = client.post("/api/bookings", json=booking_payload(requestId="src-3")).json()
+    assert body["etaSource"] == "fallback"
+
+
+def test_booking_without_coordinates_falls_back(client, add_driver):
+    add_driver()
+    body = client.post(
+        "/api/bookings",
+        json=booking_payload(requestId="src-4", pickupLat=None, pickupLng=None),
+    ).json()
+    assert body["etaSource"] == "fallback"

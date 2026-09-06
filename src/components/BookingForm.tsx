@@ -126,6 +126,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmedEta, setConfirmedEta] = useState<number | null>(null);
   const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
+  // Whether the ETA came from a real driver's position. Decides whether the
+  // confirmation may claim a dispatch at all.
+  const [driverAssigned, setDriverAssigned] = useState(false);
 
   // Exact coordinates for a place the customer picked from the suggestions.
   // Null whenever they've typed freehand, in which case we fall back to
@@ -166,7 +169,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // shut until there's a drop-off. The panel above it already says why, and
   // aria-disabled keeps the button reachable so a screen reader still finds it
   // and hears the reason, rather than it vanishing from the tab order.
+  // Nothing can be dispatched without knowing what the job is, and a tow
+  // needs somewhere to go. The panel above says which is missing.
+  const missingService = !quoteData.service;
   const missingDropoff = needsDestination && !dropoff;
+  const cannotDispatch = missingService || missingDropoff;
   useEffect(() => {
     // Runs for roadside jobs too: the truck still drives out and back, and
     // those miles are chargeable, so a jump start needs a route just as a tow
@@ -287,6 +294,12 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // The pickup as the customer would recognise it. Suggestions come back as
   // long chains ("Kwik Fit, John Street, Fernhill, Bury, BL9 0LD"), which
   // would swamp the sentence it sits in, so keep the leading parts only.
+  // "Current location (54.9727, -1.6039)" is exactly what the operator wants
+  // to see and exactly what a customer should not be read back.
+  const friendlyPickup = /^current location/i.test(quoteData.location.trim())
+    ? 'your current location'
+    : quoteData.location;
+
   const shortPickup = pickup.split(',').slice(0, 2).join(',').trim() || 'your pickup';
 
   const price = estimatePrice({
@@ -379,6 +392,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
         price: price ?? undefined,
       });
       setConfirmedEta(result.eta);
+      setDriverAssigned(result.etaSource === 'driver');
       setConfirmedPrice(price);
       setFormStep(3);
     } catch (err) {
@@ -685,6 +699,12 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   </div>
                 )}
 
+                {!quoteData.service && (
+                  <p className="rounded-none border-2 border-neutral-800 bg-black/40 px-4 py-3 min-h-[60px] flex items-center justify-center text-center text-[11px] text-neutral-400 font-medium">
+                    Choose what you need help with to see your price
+                  </p>
+                )}
+
                 {quoteData.service && (
                   <div
                     className="rounded-none border-2 border-neutral-800 bg-black/40 px-4 py-3 min-h-[60px] flex items-center"
@@ -726,9 +746,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     type="button"
                     onClick={handleBookingSubmit}
                     disabled={submitting}
-                    aria-disabled={missingDropoff}
+                    aria-disabled={cannotDispatch}
                     className={`flex-1 bg-yellow-400 text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm ${
-                      missingDropoff
+                      cannotDispatch
                         ? 'opacity-50 cursor-not-allowed'
                         : 'hover:bg-yellow-300 hover:shadow-md'
                     } disabled:bg-yellow-400/50 disabled:cursor-not-allowed`}
@@ -767,7 +787,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   tabIndex={-1}
                   className="font-display text-2xl text-white uppercase tracking-tight outline-none"
                 >
-                  {confirmedPrice === null
+                  {confirmedPrice === null || !driverAssigned
                     ? 'Request received'
                     : quoteData.timing === 'later'
                       ? 'Booking confirmed'
@@ -786,15 +806,25 @@ export function BookingForm({ regionName }: { regionName: string }) {
                       <span className="text-yellow-400 font-bold">{quoteData.phone}</span> to
                       confirm the price, then send a driver.
                     </>
+                  ) : !driverAssigned ? (
+                    // Nobody was on duty with a fresh position when this was
+                    // sent, so no truck is moving and saying otherwise would be
+                    // a promise nobody made.
+                    <>
+                      We&apos;ve got your details for{' '}
+                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>. No driver
+                      is free this second — we&apos;ll contact you as soon as possible on{' '}
+                      <span className="text-yellow-400 font-bold">{quoteData.phone}</span>.
+                    </>
                   ) : quoteData.timing === 'later' ? (
                     <>
                       We'll meet you at{' '}
-                      <span className="text-yellow-400 font-bold">{quoteData.location}</span>.
+                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>.
                     </>
                   ) : (
                     <>
                       Help is on the way to{' '}
-                      <span className="text-yellow-400 font-bold">{quoteData.location}</span>.
+                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>.
                     </>
                   )}
                 </p>
@@ -829,7 +859,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
                       {formatScheduledFor(quoteData.scheduledFor)}
                     </span>
                   </div>
-                ) : (
+                ) : driverAssigned ? (
+                  // Measured from where a driver actually is, so it can be
+                  // stated as an arrival time.
                   <div className="mt-5 flex items-baseline gap-2">
                     <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
                       Arriving in
@@ -838,6 +870,15 @@ export function BookingForm({ regionName }: { regionName: string }) {
                       {confirmedEta ?? 24}
                     </span>
                     <span className="text-neutral-500 font-bold text-sm">min</span>
+                  </div>
+                ) : (
+                  <div className="mt-5 flex flex-col items-center gap-1">
+                    <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
+                      Next step
+                    </span>
+                    <span className="font-display text-xl text-yellow-400">
+                      We&apos;ll call you
+                    </span>
                   </div>
                 )}
                 <a
