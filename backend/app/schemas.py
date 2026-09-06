@@ -48,5 +48,49 @@ class BookingOut(BaseModel):
     distanceMiles: Optional[float]
     durationMinutes: Optional[int]
     price: Optional[int]
+    driverId: Optional[int]
     status: str
     createdAt: str
+
+
+# -- Drivers -----------------------------------------------------------------
+# Coordinates appear only on DriverOut, which is admin-only. The public ETA
+# endpoint returns minutes and nothing that could locate a person.
+
+
+class DriverCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    phone: Optional[str] = Field(default=None, max_length=40)
+
+
+class DriverStateIn(BaseModel):
+    available: Optional[bool] = None
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lng: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
+class DriverOut(BaseModel):
+    id: int
+    name: str
+    phone: Optional[str]
+    available: bool
+    lat: Optional[float]
+    lng: Optional[float]
+    locatedAt: Optional[str]
+    currentBookingId: Optional[int]
+    busyUntil: Optional[str]
+    busyMinutes: int
+
+
+class BookingStatusIn(BaseModel):
+    status: Literal["pending", "accepted", "en_route", "on_scene", "complete", "cancelled"]
+    driverId: Optional[int] = None
+
+
+class EtaOut(BaseModel):
+    """Public. Deliberately carries no coordinates."""
+
+    driversOnDuty: int
+    etaMinutes: Optional[int]
+    queueMinutes: int
+    source: Literal["driver", "fallback"]

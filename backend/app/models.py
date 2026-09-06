@@ -38,9 +38,52 @@ class Booking(Base):
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     price: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Which driver took it. Null while the job is still unclaimed.
+    driver_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, index=True
+    )
+
+
+class Driver(Base):
+    """A driver and where they are right now.
+
+    A real table with real rows from the outset, even though the business runs
+    one truck today. The whole model is a fleet that switches itself on and off:
+    dispatch asks "who is free and nearest", which is the same question whether
+    the answer comes from one row or forty. A singleton row would have been
+    simpler this week and a migration with live jobs in it later.
+
+    Coordinates here are a person's live location. No public endpoint returns
+    them — /api/eta answers in minutes computed from them, and nothing else.
+    """
+
+    __tablename__ = "drivers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    # On duty and taking jobs. The driver's own switch, not dispatch's.
+    available: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    # Off the roster entirely (left, suspended) — distinct from merely off duty.
+    active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
+    lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    located_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # The job in hand and when the truck comes free. `busy_until` is what makes
+    # a queued customer's ETA honest: they are quoted the job in front of them
+    # as well as the drive to their door.
+    current_booking_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    busy_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
 

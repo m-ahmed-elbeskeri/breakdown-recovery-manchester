@@ -25,6 +25,7 @@ import { FaqSection } from './components/FaqSection';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AdminPage } from './pages/AdminPage';
+import { DriverPage } from './pages/DriverPage';
 
 const HERO_IMAGE =
   'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2000&q=80';
@@ -520,6 +521,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/driver" element={<DriverPage />} />
           <Route path="/:regionSlug" element={<LandingPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
