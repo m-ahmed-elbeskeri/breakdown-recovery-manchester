@@ -2,7 +2,7 @@
 // starting tariff for a demo/launch — the operating business tunes them in one
 // place. The number is presented as an upfront estimate, confirmed on the call.
 //
-//   Tow jobs:      callout fee + (loaded miles × per-mile rate)
+//   Tow jobs:      callout fee + (loaded miles × per-mile rate, tapering on long tows)
 //   Roadside jobs: a flat attendance fee (jump start, tyre, out-of-fuel)
 //   Empty running: chargeable miles getting from base to the job
 //   Motorway:      a surcharge for working a live carriageway
@@ -11,8 +11,17 @@
 
 /** Dispatch + attendance fee for a tow job, before per-mile charges. */
 export const CALLOUT_FEE = 45;
-/** Loaded tow rate, per mile. */
+/** Loaded tow rate, per mile, for the first `LONG_TOW_AFTER_MILES`. */
 export const PER_MILE = 2.9;
+
+/**
+ * Loaded miles charged at the full rate before a tow counts as long distance.
+ * Beyond it the rate drops: a long run is mostly steady motorway driving, and at
+ * the full rate a 165-mile tow quoted over £500 — far above what it sells for.
+ */
+export const LONG_TOW_AFTER_MILES = 30;
+/** Loaded rate per mile beyond `LONG_TOW_AFTER_MILES`. A 164.8-mile tow comes to £340. */
+export const LONG_TOW_PER_MILE = 1.55;
 /** Multiplier applied to out-of-hours (22:00–06:00) jobs. */
 export const NIGHT_MULTIPLIER = 1.2;
 
@@ -88,7 +97,9 @@ export function estimatePrice(opts: {
   if (flat !== undefined) {
     base = flat;
   } else if (opts.distanceMiles !== undefined) {
-    base = CALLOUT_FEE + opts.distanceMiles * PER_MILE;
+    const fullRate = Math.min(opts.distanceMiles, LONG_TOW_AFTER_MILES);
+    const longRate = Math.max(0, opts.distanceMiles - LONG_TOW_AFTER_MILES);
+    base = CALLOUT_FEE + fullRate * PER_MILE + longRate * LONG_TOW_PER_MILE;
   } else {
     return null;
   }

@@ -41,6 +41,17 @@ describe('estimatePrice — tow jobs', () => {
     );
   });
 
+  it('drops to the long-distance rate beyond the first 30 miles', () => {
+    // £45 + 30 × £2.90 + 134.8 × £1.55 = £340.94 → £340
+    expect(estimatePrice({ service: 'towing', distanceMiles: 164.8 })).toBe(340);
+  });
+
+  it('never charges a longer tow less than a shorter one', () => {
+    const at30 = estimatePrice({ service: 'towing', distanceMiles: 30 })!;
+    const at31 = estimatePrice({ service: 'towing', distanceMiles: 31 })!;
+    expect(at31).toBeGreaterThanOrEqual(at30);
+  });
+
   it('applies the night multiplier for out-of-hours jobs', () => {
     const day = estimatePrice({ service: 'towing', distanceMiles: 10, night: false })!;
     const night = estimatePrice({ service: 'towing', distanceMiles: 10, night: true })!;
