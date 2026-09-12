@@ -4,7 +4,7 @@
 //
 //   Tow jobs:      callout fee + (loaded miles × per-mile rate)
 //   Roadside jobs: a flat attendance fee (jump start, tyre, out-of-fuel)
-//   Empty running: chargeable miles getting to the job and home again
+//   Empty running: chargeable miles getting from base to the job
 //   Motorway:      a surcharge for working a live carriageway
 //   Out-of-hours:  a night multiplier (22:00–06:00)
 // Rounded to a clean whole figure so the customer gets one confident price.
@@ -17,18 +17,18 @@ export const PER_MILE = 2.9;
 export const NIGHT_MULTIPLIER = 1.2;
 
 /**
- * Rate for empty running — the truck driving out to the job and back to base
- * carrying nothing. Below the loaded rate, because the loaded rate also covers
+ * Rate for empty running — the truck driving out from base to the job carrying
+ * nothing. Below the loaded rate, because the loaded rate also covers
  * the winching, strapping and liability of carrying someone's car.
  */
 export const DEADHEAD_PER_MILE = 1.5;
 
 /**
- * Empty miles the callout fee already covers (roughly eight miles out and
- * eight back). Without an allowance every local job would jump in price the
- * day this was introduced; with it, only genuinely distant work costs more.
+ * Empty miles the callout fee already covers (roughly eight miles out from
+ * base). Without an allowance every local job would jump in price the day this
+ * was introduced; with it, only genuinely distant work costs more.
  */
-export const FREE_DEADHEAD_MILES = 16;
+export const FREE_DEADHEAD_MILES = 8;
 
 /**
  * Flat attendance fees for jobs fixed at the roadside (no tow distance).
@@ -76,7 +76,7 @@ export const isNightHour = (date: Date): boolean => {
 export function estimatePrice(opts: {
   service: string;
   distanceMiles?: number;
-  /** Empty miles for the round trip out of base and back. */
+  /** Empty miles from base out to the job. */
   deadheadMiles?: number;
   /** Stranded on a motorway or hard shoulder. */
   motorway?: boolean;

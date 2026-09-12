@@ -72,18 +72,19 @@ export interface JourneyEstimate {
   /** Loaded tow, pickup → drop-off. Zero for a job fixed at the roadside. */
   loadedMiles: number;
   loadedMinutes: number;
-  /** Empty running: base → pickup, plus drop-off → base (or straight back). */
+  /** Empty running: base → pickup. The drive home afterwards isn't charged. */
   deadheadMiles: number;
   deadheadMinutes: number;
 }
 
 /**
- * The whole truck movement for a job, not just the towed leg: out from base,
- * the tow itself, and home again. Quoting only the loaded miles made a job on
- * the far edge of the patch look identical to one round the corner.
+ * The truck movement a job is charged for, not just the towed leg: out from
+ * base to the car, then the tow itself. Quoting only the loaded miles made a job
+ * on the far edge of the patch look identical to one round the corner. The
+ * drive home afterwards is not charged.
  *
- * OSRM returns a leg per waypoint pair, so the entire round trip costs one
- * request rather than three — which matters on a public demo server.
+ * OSRM returns a leg per waypoint pair, so the whole journey costs one request
+ * rather than two — which matters on a public demo server.
  *
  * Returns `null` if a place can't be located or no route exists; throws only on
  * network/HTTP failure so callers can tell "no result" from "couldn't ask".
@@ -101,8 +102,8 @@ export async function estimateJourney(
   if (!base || !from) return null;
   if (destination !== null && !to) return null;
 
-  // base → pickup → [drop-off →] base
-  const waypoints = to ? [base, from, to, base] : [base, from, base];
+  // base → pickup [→ drop-off]
+  const waypoints = to ? [base, from, to] : [base, from];
   const path = waypoints.map((p) => `${p.lng},${p.lat}`).join(';');
   const res = await fetch(
     `https://router.project-osrm.org/route/v1/driving/${path}?overview=false`,
@@ -115,16 +116,15 @@ export async function estimateJourney(
   const legs = data.routes?.[0]?.legs;
   if (!legs || legs.length !== waypoints.length - 1) return null;
 
-  // With a drop-off the middle leg is the tow; without one, every leg is empty.
+  // The first leg is always the empty run out; with a drop-off, the second is the tow.
+  const empty = legs[0];
   const loaded = to ? legs[1] : null;
-  const empty = to ? [legs[0], legs[2]] : [legs[0], legs[1]];
-  const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
   return {
     loadedMiles: loaded ? Math.round(metersToMiles(loaded.distance) * 10) / 10 : 0,
     loadedMinutes: loaded ? Math.max(1, Math.round(secondsToMinutes(loaded.duration))) : 0,
-    deadheadMiles: Math.round(metersToMiles(sum(empty.map((l) => l.distance))) * 10) / 10,
-    deadheadMinutes: Math.max(1, Math.round(secondsToMinutes(sum(empty.map((l) => l.duration))))),
+    deadheadMiles: Math.round(metersToMiles(empty.distance) * 10) / 10,
+    deadheadMinutes: Math.max(1, Math.round(secondsToMinutes(empty.duration))),
   };
 }
 

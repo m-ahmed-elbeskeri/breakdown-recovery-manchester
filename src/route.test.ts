@@ -64,11 +64,10 @@ describe('estimateJourney', () => {
       }),
     );
 
-  it('splits a tow into its loaded leg and the empty running either side', async () => {
+  it('splits a tow into the empty run out and the loaded leg, with no drive home', async () => {
     mockFetch([
       { distance: 10000, duration: 600 }, // base → pickup, empty
       { distance: 24832.4, duration: 1447.8 }, // pickup → drop-off, loaded
-      { distance: 9000, duration: 540 }, // drop-off → base, empty
     ]);
 
     const result = await estimateJourney('53.4772, -2.2309', '53.5768, -2.4282');
@@ -76,15 +75,14 @@ describe('estimateJourney', () => {
     expect(result).toEqual({
       loadedMiles: 15.4,
       loadedMinutes: 24,
-      deadheadMiles: 11.8, // 19 km out and back
-      deadheadMinutes: 19,
+      deadheadMiles: 6.2, // 10 km out
+      deadheadMinutes: 10,
     });
   });
 
-  it('counts every leg as empty running for a roadside job', async () => {
+  it('counts only the drive out as empty running for a roadside job', async () => {
     mockFetch([
       { distance: 16093.44, duration: 900 }, // base → pickup
-      { distance: 16093.44, duration: 900 }, // pickup → base
     ]);
 
     const result = await estimateJourney('53.4772, -2.2309', null);
@@ -92,8 +90,8 @@ describe('estimateJourney', () => {
     expect(result).toEqual({
       loadedMiles: 0,
       loadedMinutes: 0,
-      deadheadMiles: 20,
-      deadheadMinutes: 30,
+      deadheadMiles: 10,
+      deadheadMinutes: 15,
     });
   });
 
@@ -124,7 +122,6 @@ describe('estimateJourney', () => {
 
   it('never reports a duration below one minute', async () => {
     mockFetch([
-      { distance: 120, duration: 20 },
       { distance: 120, duration: 20 },
       { distance: 120, duration: 20 },
     ]);

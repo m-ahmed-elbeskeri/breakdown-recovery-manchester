@@ -176,7 +176,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const missingDropoff = needsDestination && !dropoff;
   const cannotDispatch = missingService || missingDropoff;
   useEffect(() => {
-    // Runs for roadside jobs too: the truck still drives out and back, and
+    // Runs for roadside jobs too: the truck still drives out to the car, and
     // those miles are chargeable, so a jump start needs a route just as a tow
     // does. Only the drop-off leg is conditional.
     const needsDropoffFirst = needsDestination && dropoff.length < 3;
