@@ -187,6 +187,10 @@ export const SERVICE_OPTIONS: ServiceOption[] = [
   { value: 'fuel', label: 'I ran out of fuel', needsDestination: false },
   { value: 'ev', label: 'My electric car stopped working', needsDestination: true },
   { value: 'motorbike', label: 'My motorbike broke down', needsDestination: true },
+  // Trade work rather than a breakdown: a car bought at auction that needs
+  // collecting and delivering. Priced as a tow (callout + loaded miles), and it
+  // always needs a drop-off because the whole job is taking it somewhere.
+  { value: 'auction', label: 'Auction pickup (collect a car for me)', needsDestination: true },
   { value: 'other', label: "I'm not sure / Other", needsDestination: true },
 ];
 

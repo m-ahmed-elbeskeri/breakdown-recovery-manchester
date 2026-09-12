@@ -502,7 +502,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
             formStep === 2
               ? 'min-h-[380px]'
               : formStep === 1 && quoteData.timing === 'later'
-                ? 'min-h-[340px]'
+                ? 'min-h-[372px]'
                 : 'min-h-[280px]'
           }`}
         >
@@ -540,7 +540,21 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     Schedule Later
                   </button>
                 </div>
+                {quoteData.timing === 'later' && (
+                  // A scheduled job is usually a collection from somewhere the
+                  // customer isn't standing — a garage, a driveway, an auction
+                  // house — so the question is asked in full above the field
+                  // rather than as a placeholder, which a phone would clip
+                  // halfway through and read as broken.
+                  <label
+                    htmlFor="pickup-location"
+                    className="block text-[11px] font-black uppercase tracking-[0.15em] text-yellow-400"
+                  >
+                    Where are we picking up the car from?
+                  </label>
+                )}
                 <PlaceInput
+                  id="pickup-location"
                   inputRef={locationRef}
                   value={quoteData.location}
                   onChange={(location, pin) => {
@@ -550,7 +564,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
                   // Kept short so it isn't clipped by the Find Me button on a
                   // narrow phone — a half-truncated placeholder reads as broken.
                   placeholder={
-                    quoteData.timing === 'now' ? 'Postcode or street' : 'Where shall we meet?'
+                    quoteData.timing === 'now'
+                      ? 'Postcode or street'
+                      : 'Postcode, street or auction'
                   }
                   ariaLabel="Pickup location"
                   className="w-full pl-11 sm:pl-12 pr-[96px] sm:pr-[110px] py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"

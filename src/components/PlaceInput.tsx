@@ -25,6 +25,8 @@ interface PlaceInputProps {
   /** Rendered inside the field's relative wrapper (icons, the Find Me button). */
   children?: React.ReactNode;
   inputRef?: React.Ref<HTMLInputElement>;
+  /** Set when a visible <label htmlFor> points at this field. */
+  id?: string;
 }
 
 export function PlaceInput({
@@ -35,6 +37,7 @@ export function PlaceInput({
   className,
   children,
   inputRef,
+  id,
 }: PlaceInputProps) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -115,6 +118,7 @@ export function PlaceInput({
       <div className="relative flex items-center">
         <input
           ref={inputRef}
+          id={id}
           type="text"
           role="combobox"
           aria-expanded={open}

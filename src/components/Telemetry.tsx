@@ -47,6 +47,7 @@ const SERVICE_LABELS: Record<string, string> = {
   fuel: 'Out of fuel',
   ev: 'Electric car',
   motorbike: 'Motorbike',
+  auction: 'Auction pickup',
   other: 'Not sure / other',
 };
 
