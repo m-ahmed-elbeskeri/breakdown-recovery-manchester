@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Home, Loader2, Phone, ShieldAlert } from '../icons';
 import { Logo } from '../components/Logo';
 import { API_BASE } from '../api';
+import { whenLabel } from '../driver';
 import { TelemetryPanel } from '../components/Telemetry';
 import { useNoIndex } from '../seo';
 
@@ -258,7 +259,7 @@ export function AdminPage() {
                           {b.price != null ? `£${b.price}` : '–'}
                         </td>
                         <td className="p-3 text-neutral-400 whitespace-nowrap">
-                          {b.timing === 'now' ? 'ASAP' : (b.scheduledFor ?? 'Scheduled')}
+                          {whenLabel(b)}
                         </td>
                         <td className="p-3">
                           <span className="text-[10px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-300 px-2 py-1 rounded-none">

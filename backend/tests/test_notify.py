@@ -1,5 +1,5 @@
 from app import notify
-from app.notify import BookingDetails, notifications_enabled, render_booking_email
+from app.notify import BookingDetails, format_when, notifications_enabled, render_booking_email
 
 
 def _details(**overrides) -> BookingDetails:
@@ -33,6 +33,24 @@ def test_render_handles_missing_optionals():
         _details(destination=None, distance_miles=None, duration_minutes=None, price=None)
     )
     assert "—" in html  # empty fields render as a dash, no crash
+
+
+def test_render_shows_a_scheduled_time_readably():
+    _, html = render_booking_email(
+        _details(timing="later", scheduled_for="2026-09-14T08:30:00.000Z")
+    )
+    assert "2026-09-14T" not in html
+    assert "14 Sep" in html
+
+
+def test_format_when_uses_uk_time():
+    # 08:30 UTC in September is 09:30 in the UK (BST), unless the host has no tz data.
+    assert format_when("later", "2026-09-14T08:30:00.000Z") in (
+        "Scheduled: Mon 14 Sep, 09:30",
+        "Scheduled: Mon 14 Sep, 08:30",
+    )
+    assert format_when("now", None) == "ASAP (now)"
+    assert format_when("later", None) == "Scheduled · time not given"
 
 
 def test_notifications_disabled_without_config(monkeypatch):

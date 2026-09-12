@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { API_BASE } from '../api';
 import {
   agoLabel,
+  whenLabel,
   DRIVER_KEY_STORAGE,
   fetchDrivers,
   fetchJobs,
@@ -462,6 +463,14 @@ function JobCard({
         </div>
 
         <dl className="text-sm grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+          <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
+            When
+          </dt>
+          <dd
+            className={`font-bold ${job.timing === 'later' && !finished ? 'text-yellow-400' : ''}`}
+          >
+            {whenLabel(job)}
+          </dd>
           <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
             Pickup
           </dt>

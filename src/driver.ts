@@ -141,6 +141,21 @@ export function mapsUrl(job: Job): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.location)}`;
 }
 
+/** When the customer wants the truck: "ASAP", or "Sat 14 Sept, 09:30" for a booking. */
+export function whenLabel(job: Pick<Job, 'timing' | 'scheduledFor'>): string {
+  if (job.timing !== 'later') return 'ASAP';
+  const at = job.scheduledFor ? new Date(job.scheduledFor) : null;
+  if (!at || Number.isNaN(at.getTime())) return 'Scheduled · time not given';
+  return at.toLocaleString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 /** "3 min ago" — how stale the position we last sent is. */
 export function agoLabel(iso: string | null): string {
   if (!iso) return 'no position yet';

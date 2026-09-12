@@ -6,15 +6,22 @@ path (failures are logged, not surfaced to the customer).
 """
 
 import logging
+from datetime import datetime, timezone
 from html import escape
 from typing import TypedDict
 from urllib.parse import quote
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 
 from .config import settings
 
 logger = logging.getLogger("uvicorn.error")
+
+try:
+    UK = ZoneInfo("Europe/London")
+except ZoneInfoNotFoundError:  # no tz database on this host; UTC is within an hour
+    UK = timezone.utc
 
 
 class BookingDetails(TypedDict):
@@ -78,11 +85,31 @@ def _link(label: str, href: str) -> str:
 NEEDS_QUOTE = "Quote on call"
 
 
+def format_when(timing: str, scheduled_for: str | None) -> str:
+    """"ASAP (now)", or a booking as the operator reads it: "Mon 14 Sep, 09:30".
+
+    The browser sends UTC ISO strings; shown raw, a 9:30 booking in summer
+    reads as 08:30 and is easy to turn up an hour late for.
+    """
+    if timing == "now":
+        return "ASAP (now)"
+    if not scheduled_for:
+        return "Scheduled · time not given"
+    try:
+        at = datetime.fromisoformat(scheduled_for.replace("Z", "+00:00"))
+    except ValueError:
+        return f"Scheduled: {scheduled_for}"
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
+    at = at.astimezone(UK)
+    return f"Scheduled: {at:%a} {at.day} {at:%b}, {at:%H:%M}"
+
+
 def render_booking_email(b: BookingDetails) -> tuple[str, str]:
     """Return (subject, html) for a booking alert."""
     has_price = b["price"] is not None
     price = f"£{b['price']}" if has_price else NEEDS_QUOTE
-    when = "ASAP (now)" if b["timing"] == "now" else f"Scheduled: {b['scheduled_for']}"
+    when = format_when(b["timing"], b["scheduled_for"])
     journey = (
         f"{b['distance_miles']} mi · ~{b['duration_minutes']} min"
         if b["distance_miles"] is not None
