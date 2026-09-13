@@ -1,10 +1,21 @@
 import { HelpCircle, ChevronDown, PhoneCall } from '../icons';
 import { PHONE_TEL, PHONE_DISPLAY } from '../config';
-import { buildFaqItems } from '../data';
+import { buildFaqItems, type FaqItem } from '../data';
 import { Reveal } from './motion';
 
-export function FaqSection({ regionName }: { regionName: string }) {
-  const items = buildFaqItems(regionName);
+export function FaqSection({
+  regionName,
+  items,
+  title,
+  intro,
+}: {
+  regionName: string;
+  /** Defaults to the area FAQ for `regionName`. */
+  items?: FaqItem[];
+  title?: string;
+  intro?: string;
+}) {
+  const list = items ?? buildFaqItems(regionName);
   return (
     <section
       className="bg-white border-t border-slate-200 py-12 sm:py-20 px-4"
@@ -19,15 +30,15 @@ export function FaqSection({ regionName }: { regionName: string }) {
             id="faq-heading"
             className="font-sans font-extrabold text-3xl md:text-5xl text-slate-950 tracking-tight"
           >
-            {regionName} Recovery FAQs
+            {title ?? `${regionName} Recovery FAQs`}
           </h2>
           <p className="text-slate-600 mt-4 font-medium">
-            Everything you need to know about our breakdown service in {regionName}.
+            {intro ?? `Everything you need to know about our recovery service in ${regionName}.`}
           </p>
         </Reveal>
 
         <div className="space-y-3">
-          {items.map((item, i) => (
+          {list.map((item, i) => (
             <Reveal key={item.q} delay={Math.min(i * 0.06, 0.3)}>
               <details className="group bg-slate-50 border-2 border-slate-200 hover:border-yellow-400 transition-colors">
                 <summary className="flex items-center justify-between gap-4 p-5 cursor-pointer list-none font-sans font-bold text-base md:text-lg tracking-tight text-slate-950">
@@ -55,6 +66,7 @@ export function FaqSection({ regionName }: { regionName: string }) {
           <p className="text-slate-600 mb-4">Still got a question?</p>
           <a
             href={`tel:${PHONE_TEL}`}
+            data-call="faq"
             className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-display uppercase tracking-wider"
             aria-label={`Call us on ${PHONE_DISPLAY}`}
           >

@@ -17,6 +17,13 @@ class Booking(Base):
     # Client-generated idempotency key — makes booking submission safe to retry.
     request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
 
+    # The customer's key to their own booking. Unguessable, handed back once at
+    # booking time, and the only thing the public tracking page accepts. A
+    # sequential id would let anyone read anyone's pickup and phone number.
+    track_token: Mapped[str | None] = mapped_column(
+        String(48), unique=True, index=True, nullable=True
+    )
+
     region: Mapped[str] = mapped_column(String(120))
     location: Mapped[str] = mapped_column(Text)
     destination: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -24,6 +31,11 @@ class Booking(Base):
     service: Mapped[str] = mapped_column(String(40))
     timing: Mapped[str] = mapped_column(String(10))  # "now" | "later"
     scheduled_for: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    # What the driver is looking for: a registration, or "silver Ford Focus".
+    # Optional, because someone stood on a hard shoulder should not be made to
+    # find their V5C before help is sent.
+    vehicle: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
     # Where the customer actually is, resolved by the browser at booking time.
     # Kept alongside the free-text location because a driver needs a pin, not a
@@ -42,6 +54,22 @@ class Booking(Base):
     driver_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+
+    # When each step happened. This is what turns "average response 24 min"
+    # from a seeded number into a measured one, and what the customer's
+    # tracking page shows as a timeline.
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    en_route_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    on_scene_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # "customer" or "driver", so a driver arriving at a cancelled job can see
+    # whose decision it was.
+    cancelled_by: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
+    # The customer's verdict once the job is done. 1–5, and a few words.
+    rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rating_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, index=True
     )
@@ -56,8 +84,9 @@ class Driver(Base):
     the answer comes from one row or forty. A singleton row would have been
     simpler this week and a migration with live jobs in it later.
 
-    Coordinates here are a person's live location. No public endpoint returns
-    them — /api/eta answers in minutes computed from them, and nothing else.
+    Coordinates here are a person's live location. The only public endpoint
+    that returns them is the customer's own tracking page, only for the driver
+    assigned to that booking, and only while that driver is on the way.
     """
 
     __tablename__ = "drivers"
@@ -126,6 +155,14 @@ class Event(Base):
 
 
 class Metric(Base):
+    """Seed figures for the dispatch panel.
+
+    Only `avg_response_minutes` is still read, and only until enough real jobs
+    have been timed to replace it (see `main.get_metrics`). The other two
+    columns are computed live from bookings and drivers and are kept here
+    solely so the table needs no migration.
+    """
+
     __tablename__ = "metrics"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

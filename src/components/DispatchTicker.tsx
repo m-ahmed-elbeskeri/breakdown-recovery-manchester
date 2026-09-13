@@ -3,13 +3,14 @@
 
 const TICKER_ITEMS = [
   '24/7 Dispatch',
+  'Price Up Front',
+  'Live Driver Tracking',
   'Flatbed Recovery',
   'EV & Hybrid',
   '12V Jump Start',
   'Motorway M60 · M61 · M62',
   'Out of Fuel',
   'Auction Transport',
-  'Secure Storage',
   'Motorbike Recovery',
   'No Hidden Fees',
 ];

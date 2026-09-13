@@ -44,12 +44,18 @@ describe('checkPhone — rejected numbers', () => {
     return result.ok ? null : result.error;
   };
 
-  it.each(['', '   ', '1234567', '12345', 'call me', '07700 90012', '077009001234', '0161 496 000'])(
-    'rejects %j',
-    (input) => {
-      expect(error(input)).toMatch(/valid phone/i);
-    },
-  );
+  it.each([
+    '',
+    '   ',
+    '1234567',
+    '12345',
+    'call me',
+    '07700 90012',
+    '077009001234',
+    '0161 496 000',
+  ])('rejects %j', (input) => {
+    expect(error(input)).toMatch(/valid phone/i);
+  });
 
   it('explains a mobile that is a digit short', () => {
     expect(error('0770090012')).toMatch(/short/i);

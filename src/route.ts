@@ -57,6 +57,35 @@ async function geocodeOutward(outward: string, signal?: AbortSignal): Promise<La
     : null;
 }
 
+/** A full UK postcode and nothing else, e.g. "M1 1AA" or "bl90nh". */
+const FULL_POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+
+/**
+ * The centre of a full postcode, from Royal Mail data.
+ *
+ * Nominatim is not to be trusted with these: asked for "M1 1AA" (Manchester
+ * Piccadilly) it answered with the M1 motorway in Leicestershire, and a jump
+ * start in the city centre was priced as a 130-mile run. Every Manchester
+ * postcode starts with a letter that is also a motorway, so this is not an
+ * edge case here; it is the common case.
+ *
+ * Returns null when the postcode does not exist, and throws when the service
+ * could not be asked, so the caller can fall back to a general geocoder for an
+ * outage but not for a made-up postcode.
+ */
+async function geocodePostcode(postcode: string, signal?: AbortSignal): Promise<LatLng | null> {
+  const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`, {
+    signal,
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`postcode lookup failed (${res.status})`);
+  const data = (await res.json()) as { result?: { latitude?: number; longitude?: number } };
+  const { latitude, longitude } = data.result ?? {};
+  return typeof latitude === 'number' && typeof longitude === 'number'
+    ? { lat: latitude, lng: longitude }
+    : null;
+}
+
 async function geocode(query: string, signal?: AbortSignal): Promise<LatLng | null> {
   const key = query.trim().toLowerCase();
   if (!key) return null;
@@ -67,6 +96,18 @@ async function geocode(query: string, signal?: AbortSignal): Promise<LatLng | nu
     const result = await geocodeOutward(key.toUpperCase(), signal);
     geocodeCache.set(key, result);
     return result;
+  }
+
+  if (FULL_POSTCODE.test(key)) {
+    try {
+      const result = await geocodePostcode(key.toUpperCase().replace(/\s+/g, ' '), signal);
+      geocodeCache.set(key, result);
+      return result;
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      // The postcode service is down, not the postcode wrong: try the
+      // general geocoder rather than refusing to price the job at all.
+    }
   }
 
   const url =

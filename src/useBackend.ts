@@ -9,6 +9,8 @@ export interface BookingArgs {
   service: string;
   timing: 'now' | 'later';
   scheduledFor?: string;
+  /** Registration or "silver Ford Focus" — whatever helps the driver spot it. */
+  vehicle?: string;
   /** Pickup coordinates, when the browser could resolve them. Lets the operator
    *  alert carry an exact map pin instead of a search for the typed address. */
   pickupLat?: number;
@@ -33,13 +35,20 @@ export interface BookingResult {
   /** `driver` = measured from a real position. Anything else is an average. */
   etaSource: 'driver' | 'fallback';
   mode: 'api' | 'local';
+  /** The key to the customer's live tracking page. Absent for a queued booking
+   *  that has not reached the server yet. */
+  trackToken?: string;
+}
+
+/** What the backend answers a booking with. */
+export interface BookingResponse {
+  eta?: number;
+  etaSource?: 'driver' | 'fallback';
+  trackToken?: string | null;
 }
 
 /** Sends a booking to the backend. Injected so the queue logic is testable. */
-export type PostBooking = (payload: BookingPayload) => Promise<{
-  eta?: number;
-  etaSource?: 'driver' | 'fallback';
-}>;
+export type PostBooking = (payload: BookingPayload) => Promise<BookingResponse>;
 
 const FALLBACK_KEY = 'pending_bookings_v1';
 const SUBMIT_TIMEOUT_MS = 4000;
@@ -58,7 +67,7 @@ const postBooking: PostBooking = async (payload) => {
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`booking failed (${res.status})`);
-  return (await res.json()) as { eta?: number; etaSource?: 'driver' | 'fallback' };
+  return (await res.json()) as BookingResponse;
 };
 
 /** Read the queue of bookings awaiting delivery to the backend. */
@@ -88,6 +97,11 @@ const etaOf = (result: unknown): number => (result as { eta?: number } | null)?.
 /** Only "driver" counts as measured; anything else is the published average. */
 const etaSourceOf = (result: unknown): 'driver' | 'fallback' =>
   (result as { etaSource?: string } | null)?.etaSource === 'driver' ? 'driver' : 'fallback';
+
+const tokenOf = (result: unknown): string | undefined => {
+  const token = (result as { trackToken?: unknown } | null)?.trackToken;
+  return typeof token === 'string' && token.length > 0 ? token : undefined;
+};
 
 const submitWithTimeout = (
   post: PostBooking,
@@ -125,11 +139,13 @@ export async function submitBooking(
 
   try {
     const result = await submitWithTimeout(post, payload, timeoutMs);
+    const trackToken = tokenOf(result);
     return {
       ok: true,
       eta: etaOf(result),
       etaSource: etaSourceOf(result),
       mode: 'api',
+      ...(trackToken ? { trackToken } : {}),
     };
   } catch (err) {
     console.warn('[booking] API submit failed, queued for retry:', err);

@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Home } from '../icons';
 import { Logo } from '../components/Logo';
-import { PHONE_DISPLAY, BRAND_NAME, BRAND_WORDMARK } from '../config';
+import { Wordmark } from '../components/Layout';
+import { PHONE_DISPLAY, CONTACT_EMAIL } from '../config';
 import { useNoIndex } from '../seo';
 
 export function PrivacyPolicy() {
-  useNoIndex();
+  useNoIndex('Privacy Policy');
   useEffect(() => {
-    document.title = `Privacy Policy | ${BRAND_NAME}`;
     window.scrollTo(0, 0);
   }, []);
 
@@ -18,9 +18,7 @@ export function PrivacyPolicy() {
         <div className="max-w-3xl mx-auto px-4 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <Logo className="w-9 h-9 shrink-0" />
-            <span className="font-display text-xl tracking-tight">
-              {BRAND_WORDMARK[0]} <span className="wordmark-paint">{BRAND_WORDMARK[1]}</span>
-            </span>
+            <Wordmark className="text-xl" />
           </Link>
           <Link
             to="/"
@@ -35,20 +33,39 @@ export function PrivacyPolicy() {
         <h1 className="font-sans font-extrabold text-3xl md:text-4xl tracking-tight mb-2">
           Privacy Policy
         </h1>
-        <p className="text-sm text-slate-500">Last updated: July 2026</p>
+        <p className="text-sm text-slate-500">Last updated: September 2026</p>
 
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">What we collect</h2>
         <p className="text-slate-700">
           When you request recovery we collect only what we need to reach you: your phone number,
           the pickup location you provide (or approximate GPS coordinates if you tap "Find Me"), the
-          service you need, and any drop-off location. We do not require your name, email, or
-          payment details to book.
+          service you need, any drop-off location, and, if you choose to give it, your vehicle's
+          registration or description. We do not require your name, email, or payment details to
+          book.
+        </p>
+
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">
+          Tracking your driver
+        </h2>
+        <p className="text-slate-700">
+          Your booking comes with a private tracking link. Anyone with that link can see the
+          booking's status, pickup and drop-off, so treat it like a ticket. While a driver is on the
+          way to you the page shows their live position; the driver can see your pickup location and
+          phone number for the same job. Neither of you is tracked outside the job.
         </p>
 
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">How we use it</h2>
         <p className="text-slate-700">
           Your details are used solely to dispatch a recovery vehicle and to contact you about that
-          recovery. We do not sell your data or use it for marketing.
+          recovery. Ratings you leave are shown to the operator and the driver. We do not sell your
+          data or use it for marketing.
+        </p>
+
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">Site analytics</h2>
+        <p className="text-slate-700">
+          We count visits and where people give up in the booking form so we can improve it. This
+          uses a random identifier that lives only in your browser tab and is discarded when it
+          closes. No cookies, no IP addresses, and never anything you type into the form.
         </p>
 
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">
@@ -64,7 +81,8 @@ export function PrivacyPolicy() {
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">Your rights</h2>
         <p className="text-slate-700">
           Under UK GDPR you can ask us to access, correct, or erase the personal data we hold about
-          you. To make a request, call {PHONE_DISPLAY} and quote the phone number you booked with.
+          you. To make a request, call {PHONE_DISPLAY} or email {CONTACT_EMAIL} and quote the phone
+          number you booked with.
         </p>
 
         <p className="text-slate-500 text-sm mt-10">

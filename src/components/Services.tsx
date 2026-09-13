@@ -1,8 +1,33 @@
+import { Link } from 'react-router-dom';
 import { ArrowRight, PhoneCall } from '../icons';
 import { PHONE_TEL } from '../config';
 import { FEATURED_SERVICES, GRID_SERVICES } from '../data';
 import { scrollToBooking } from '../ui';
 import { Reveal } from './motion';
+
+/** The CTA of a service card: a link to its page, or a scroll to the form. */
+function ServiceCta({
+  href,
+  label,
+  className,
+}: {
+  href?: string;
+  label: string;
+  className: string;
+}) {
+  if (href) {
+    return (
+      <Link to={href} className={className}>
+        {label} <ArrowRight className="w-4 h-4" />
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={scrollToBooking} className={className}>
+      {label} <ArrowRight className="w-4 h-4" />
+    </button>
+  );
+}
 
 export function FeaturedServices({ regionName }: { regionName: string }) {
   return (
@@ -16,11 +41,11 @@ export function FeaturedServices({ regionName }: { regionName: string }) {
             id="services-heading"
             className="font-sans font-extrabold text-3xl md:text-5xl text-slate-950 mb-6 tracking-tight"
           >
-            Premium Recovery Services
+            Recovery, Towing and Roadside Help
           </h2>
           <p className="text-lg text-slate-600 font-medium">
-            We don't just tow cars. We provide a comprehensive suite of professional recovery and
-            transport solutions in {regionName}.
+            We don't just tow cars. Jump starts, fuel, tyres, EVs, motorbikes and vehicle transport,
+            all priced up front, across {regionName}.
           </p>
         </Reveal>
 
@@ -50,13 +75,11 @@ export function FeaturedServices({ regionName }: { regionName: string }) {
                       <p className="text-neutral-300 font-medium mb-6 leading-relaxed text-sm">
                         {service.body}
                       </p>
-                      <button
-                        type="button"
-                        onClick={scrollToBooking}
+                      <ServiceCta
+                        href={service.href}
+                        label={service.cta}
                         className="text-yellow-400 font-bold flex items-center gap-2 hover:gap-3 hover:text-yellow-300 text-sm uppercase tracking-wider transition-all"
-                      >
-                        {service.cta} <ArrowRight className="w-4 h-4" />
-                      </button>
+                      />
                     </div>
                   </div>
                 ) : (
@@ -77,13 +100,11 @@ export function FeaturedServices({ regionName }: { regionName: string }) {
                       <p className="text-slate-600 font-medium mb-6 leading-relaxed text-sm">
                         {service.body}
                       </p>
-                      <button
-                        type="button"
-                        onClick={scrollToBooking}
+                      <ServiceCta
+                        href={service.href}
+                        label={service.cta}
                         className="text-slate-950 font-bold flex items-center gap-2 hover:gap-3 text-sm uppercase tracking-wider transition-all"
-                      >
-                        {service.cta} <ArrowRight className="w-4 h-4" />
-                      </button>
+                      />
                     </div>
                   </div>
                 )}
@@ -97,6 +118,8 @@ export function FeaturedServices({ regionName }: { regionName: string }) {
 }
 
 export function ServicesGrid() {
+  const tileClass =
+    'group relative block w-full h-32 sm:h-40 rounded-none overflow-hidden border-2 border-slate-200 hover:border-yellow-400 hover:-translate-y-1 hover:shadow-md transition-all duration-200 text-left cursor-pointer';
   return (
     <section
       id="services"
@@ -113,13 +136,9 @@ export function ServicesGrid() {
           </h2>
         </Reveal>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-          {GRID_SERVICES.map((service, i) => (
-            <Reveal key={service.name} delay={Math.min(i * 0.04, 0.4)} className="h-full">
-              <button
-                type="button"
-                onClick={scrollToBooking}
-                className="group relative w-full h-32 sm:h-40 rounded-none overflow-hidden border-2 border-slate-200 hover:border-yellow-400 hover:-translate-y-1 hover:shadow-md transition-all duration-200 text-left cursor-pointer"
-              >
+          {GRID_SERVICES.map((service, i) => {
+            const inner = (
+              <>
                 <img
                   src={service.image}
                   alt={service.imageAlt}
@@ -131,14 +150,28 @@ export function ServicesGrid() {
                 <h3 className="absolute bottom-0 left-0 right-0 p-3 font-sans font-extrabold text-white text-sm sm:text-base tracking-tight leading-tight group-hover:text-yellow-400 transition-colors">
                   {service.name}
                 </h3>
-              </button>
-            </Reveal>
-          ))}
+              </>
+            );
+            return (
+              <Reveal key={service.name} delay={Math.min(i * 0.04, 0.4)} className="h-full">
+                {service.href ? (
+                  <Link to={service.href} className={tileClass}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <button type="button" onClick={scrollToBooking} className={tileClass}>
+                    {inner}
+                  </button>
+                )}
+              </Reveal>
+            );
+          })}
         </div>
 
         <div className="mt-10 sm:mt-16 text-center">
           <a
             href={`tel:${PHONE_TEL}`}
+            data-call="services"
             className="sheen inline-flex bg-yellow-400 hover:bg-yellow-300 text-neutral-950 px-8 py-4 rounded-none font-display uppercase tracking-wider transition-all items-center gap-3 shadow-md hover:shadow-lg"
           >
             <PhoneCall className="w-5 h-5" />

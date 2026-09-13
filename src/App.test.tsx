@@ -28,7 +28,7 @@ describe('App (smoke)', () => {
     const view = renderApp();
 
     // Hero headline + booking form heading both render → the app mounted cleanly.
-    expect(view.getByRole('heading', { level: 1, name: /breakdown/i })).toBeInTheDocument();
+    expect(view.getByRole('heading', { level: 1, name: /car recovery/i })).toBeInTheDocument();
     expect(view.getByRole('heading', { name: /Get Back On The Road/i })).toBeInTheDocument();
 
     // Truthful security statement, and the old false claim is gone.

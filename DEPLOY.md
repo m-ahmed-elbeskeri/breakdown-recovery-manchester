@@ -10,8 +10,7 @@ Render reads `render.yaml` and builds `backend/Dockerfile` (which runs
 
 1. **Put the code on GitHub** (Render deploys from a repo):
    ```bash
-   git init && git add . && git commit -m "Initial commit"
-   gh repo create breakdown-recovery-manchester --private --source=. --push
+   gh repo create car-recovery-near-me --private --source=. --push
    # (or create a repo on github.com and `git remote add origin … && git push -u origin main`)
    ```
 2. Sign up at **https://render.com** (GitHub login is easiest, no card for the free tier).
@@ -19,10 +18,13 @@ Render reads `render.yaml` and builds `backend/Dockerfile` (which runs
 4. When prompted, fill the secret env vars:
    - `DATABASE_URL` — your Neon string (same one in `backend/.env`)
    - `ADMIN_API_KEY` — the key in `backend/.env`
-   - `CORS_ORIGINS` — your site's URL, e.g. `https://your-site.example`
+   - `CORS_ORIGINS` — your site's URL, e.g. `https://carrecoverynearme.uk`
    - `RESEND_API_KEY`, `NOTIFY_EMAIL_TO` — optional (see below)
-5. **Apply** → wait for the build. Your API is live at
-   `https://breakdown-recovery-api.onrender.com` (health: `/api/health`).
+   - `SITE_URL` — defaults to `https://carrecoverynearme.uk`; only set it if
+     the site lives somewhere else (it builds the tracking link in the alert email)
+5. **Apply** → wait for the build. Your API is live at the service URL Render
+   shows, which gets a random suffix when the name is taken. This project's is
+   `https://breakdown-recovery-api-dxja.onrender.com` (health: `/api/health`).
 
 > Free instances sleep after ~15 min idle and cold-start in a few seconds. The
 > site handles this gracefully (queued bookings, simulated metrics) until it wakes.
@@ -42,7 +44,7 @@ second choice (100 GB/month free).
    - Build output directory: `dist`
 4. Environment variables → add:
    ```
-   VITE_API_URL = https://breakdown-recovery-api.onrender.com
+   VITE_API_URL = https://breakdown-recovery-api-dxja.onrender.com
    ```
    This is baked in at build time, so **changing it later needs a redeploy**,
    not just a settings save.
@@ -51,43 +53,60 @@ second choice (100 GB/month free).
    (comma-separated, no trailing slash). Until you do, the browser will block
    every API call and the site will silently fall back to simulated metrics.
 
-### Why `public/_redirects` matters
+### What `npm run build` produces
 
-Routing is client-side, so only `index.html` exists on disk. `public/_redirects`
-rewrites everything to it with a **200**. Without that file, all 35 area pages
-(`/breakdown-recovery-bolton` and friends) return a hard 404 when opened
-directly or refreshed — including to Googlebot, which would sink the per-area
-SEO the whole site is built around. `public/_headers` sets asset caching and
-basic security headers. Both files are copied into `dist/` by the build and are
-understood by Cloudflare Pages and Netlify alike.
+Three steps: the client bundle, an SSR bundle, then `scripts/prerender.mjs`
+renders every public page to `dist/<path>/index.html` with its own title,
+description, canonical URL, social tags and JSON-LD, and writes `sitemap.xml`.
+Search engines and link previews get complete HTML; React attaches on load.
+
+The prerender step also writes `dist/_redirects`: one 301 per old
+`/breakdown-recovery-<area>` URL to `/car-recovery-<area>`, and 200 rewrites of
+`/track/*`, `/driver`, `/admin` and `/privacy` to the empty app shell
+`app.html`. There is deliberately **no catch-all rule and no wildcard 301**.
+Cloudflare Pages applies redirects before static files, so a catch-all would
+serve the empty shell instead of every prerendered page, and a
+`/breakdown-recovery-*` wildcard would hijack the
+`/breakdown-recovery-manchester` service page. Unknown URLs fall through to
+Pages' built-in single-page-app handling, and the app shows its 404 page.
+`public/_headers` sets asset caching and basic security headers.
+
+### Deploying with Wrangler instead of Git
+
+The Pages project `recovery-mayte` is a direct-upload project, so a push does
+not rebuild it. From the repo root:
+
+```bash
+VITE_API_URL=https://breakdown-recovery-api-dxja.onrender.com npm run build
+npx wrangler pages deploy dist --project-name recovery-mayte --branch main
+```
+
+Use `--branch <anything-else>` to get a preview URL first.
 
 ## Before you go live
 
-Hosting is free. A domain is not (~£8–12/year for a `.co.uk`) — you can launch
-on the free `*.pages.dev` subdomain, but a real domain is worth it for a local
-business, and Cloudflare will issue the SSL certificate free either way.
+1. **Register the domain: `carrecoverynearme.uk`** (~£8–12/year). It was
+   unregistered at Nominet on 13 September 2026. Add it as a custom domain on
+   the Pages project; Cloudflare issues the certificate free.
+2. Everything already says that domain — `src/config.ts` (`SITE_URL`, drives
+   canonical URLs, JSON-LD and the sitemap), `index.html`, `public/robots.txt`,
+   `scripts/brand/og-image.html`, and the backend default `SITE_URL`. If you end
+   up on a different domain, change those and run `npm run brand:assets`.
+3. Create the `hello@carrecoverynearme.uk` mailbox (it is in the footer and the
+   structured data), or change `CONTACT_EMAIL` in `src/config.ts`.
+4. Add at least one driver in `/admin → Drivers`; the driver console picks
+   from that roster.
+5. Rotate the Neon, Resend and admin keys if this repo has ever been shared.
 
-Once you know the final domain, these still contain the placeholder
-`breakdown-recovery-manchester.co.uk` and must all be updated together:
+Then verify:
 
-- [ ] `src/config.ts` — `SITE_URL` (drives canonical URLs and JSON-LD)
-- [ ] `public/robots.txt` — the `Sitemap:` line
-- [ ] `public/sitemap.xml` — all 36 `<loc>` entries
-- [ ] `index.html` — canonical link, `og:url`, `og:image`, `twitter:image`, and
-      the `@id`/`url`/`logo`/`email` fields in the JSON-LD block
-
-And the details that are still placeholders regardless of domain:
-
-- [x] **Phone number** — set to `07442 384141` in `PHONE_TEL` / `PHONE_DISPLAY`
-      (`src/config.ts`), the `index.html` JSON-LD and the noscript block.
-- [ ] **Email** — `email` in the JSON-LD
-- [ ] **Company number / trading address / insurer** — not currently shown
-      anywhere; see the last section of `BRAND.md`
-- [ ] Rotate the Neon, Resend and admin keys if this repo has ever been shared
-
-Then verify: open a region URL directly (not by clicking) — e.g.
-`https://your-domain/breakdown-recovery-bolton` — and confirm it renders rather
-than 404s. That single check proves the `_redirects` rule is live.
+- Open `https://your-domain/car-recovery-bolton` directly and view source: the
+  page should be full HTML with `<title>Car Recovery Bolton …`.
+- Open `https://your-domain/breakdown-recovery-bolton`: it should 301 to the
+  new address.
+- Make a test booking, open the tracking link, sign into `/driver`, go on
+  duty and take the job: the tracking page should name the driver and, once
+  "On my way" is tapped, show the truck on the map.
 
 ## Email alerts (optional)
 
@@ -97,7 +116,8 @@ than 404s. That single check proves the `_redirects` rule is live.
 3. Set on the API (Render env vars or `backend/.env` locally):
    - `RESEND_API_KEY` = your key
    - `NOTIFY_EMAIL_TO` = your email
-4. Every new booking now emails you the customer's details.
+4. Every new booking now emails you the customer's details, a map pin, and the
+   customer's tracking link (handy to text to someone who booked by phone).
 
 ## Alternatives
 

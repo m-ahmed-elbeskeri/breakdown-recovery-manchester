@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  App icon template. Rendered to PNG by scripts/render-brand.mjs with headless
+  Chrome. Query string picks the variant and size:
+
+    ?variant=any&size=192       transparent background, pin fills the tile
+    ?variant=maskable&size=512  navy tile, pin kept inside the 80% safe zone
+    ?variant=apple&size=180     navy tile, slightly larger pin (iOS rounds the corners)
+
+  The tile is anchored to the page's top-left corner at exactly `size` pixels.
+  Headless Chrome will not lay out a viewport narrower than a few hundred
+  pixels, but its screenshot is still cropped to the requested window size from
+  the top-left — so anchoring there is what makes a 192px capture contain a
+  192px icon rather than the left edge of a centred one.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: transparent;
+      }
+      .tile {
+        position: absolute;
+        left: 0;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .tile.maskable,
+      .tile.apple {
+        background: #0d2038;
+      }
+      .tile svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .tile.maskable svg {
+        width: 62%;
+        height: 62%;
+      }
+      .tile.apple svg {
+        width: 74%;
+        height: 74%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tile" id="tile">
+      <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z"
+          fill="#f5c518"
+          stroke="#0e151d"
+          stroke-width="3"
+          stroke-linejoin="round"
+        />
+        <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#0e151d" stroke-width="2.6" />
+        <path
+          d="M26.5 12.8 V19.5 C26.5 25 19 25.5 19 21"
+          fill="none"
+          stroke="#0e151d"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const variant = params.get('variant') || 'any';
+      const size = Number(params.get('size')) || 512;
+      const tile = document.getElementById('tile');
+      tile.classList.add(variant);
+      tile.style.width = tile.style.height = `${size}px`;
+    </script>
+  </body>
+</html>

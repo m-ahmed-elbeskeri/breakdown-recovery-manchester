@@ -92,7 +92,8 @@ export function checkPhone(input: string): PhoneCheck {
 
   if (international) {
     // E.164 allows up to 15 digits; nothing real is shorter than 8.
-    if (digits.length < 8 || digits.length > 15) return fail('that international number looks incomplete.');
+    if (digits.length < 8 || digits.length > 15)
+      return fail('that international number looks incomplete.');
     return { ok: true, formatted: `+${digits}` };
   }
 

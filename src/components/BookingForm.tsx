@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import Flatpickr from 'react-flatpickr';
 import {
@@ -16,13 +17,16 @@ import {
   ShieldCheck,
   Calendar,
   AlertTriangle,
+  Car,
+  Copy,
+  Check,
 } from '../icons';
-import { PHONE_TEL, PHONE_DISPLAY } from '../config';
+import { PHONE_TEL, PHONE_DISPLAY, SITE_URL, trackPath } from '../config';
 import { SERVICE_OPTIONS, serviceNeedsDestination } from '../data';
 import { CountUp } from './motion';
 import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
-import { validateQuote, type QuoteData } from '../validation';
+import { validateQuote, VEHICLE_MAX_LENGTH, type QuoteData } from '../validation';
 import {
   detectMotorway,
   detectMotorwayAt,
@@ -64,6 +68,12 @@ const formatScheduledFor = (d: Date | null): string =>
 
 /** How often to re-ask what the wait is, so availability stays current. */
 const ETA_POLL_MS = 15_000;
+/**
+ * Pause after the last keystroke before geocoding a typed pickup for the live
+ * wait. Without this every keystroke was a Nominatim request, which their
+ * usage policy forbids and enforces with an IP ban.
+ */
+const ETA_DEBOUNCE_MS = 900;
 
 const GEO_OPTIONS: PositionOptions = {
   enableHighAccuracy: false,
@@ -110,7 +120,63 @@ function PriceReveal({
   );
 }
 
-export function BookingForm({ regionName }: { regionName: string }) {
+/** The second tile of the dispatch panel: whichever real figure we have. */
+function ActivityStat() {
+  const metrics = useMetrics();
+  if (!metrics.isLive) {
+    return <Stat label="Rescues / Day" value={<CountUp value={metrics.rescuesToday} />} />;
+  }
+  if (metrics.rescuesToday > 0) {
+    return <Stat label="Rescues Today" value={<CountUp value={metrics.rescuesToday} />} />;
+  }
+  if (metrics.driversAvailable > 0) {
+    return <Stat label="On Duty Now" value={<CountUp value={metrics.driversAvailable} />} />;
+  }
+  return <Stat label="Dispatch" value="24/7" />;
+}
+
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center px-4 py-2.5 sm:py-5">
+      <div className="text-[10px] sm:text-xs text-red-500 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
+        {label}
+      </div>
+      <div className="font-display text-2xl sm:text-4xl text-white">{value}</div>
+    </div>
+  );
+}
+
+/** "Copy link" that says it did. */
+function CopyLink({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked: the link is visible on screen anyway */
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-white"
+    >
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? 'Link copied' : 'Copy tracking link'}
+    </button>
+  );
+}
+
+export function BookingForm({
+  regionName,
+  defaultService = '',
+}: {
+  regionName: string;
+  defaultService?: string;
+}) {
   const metrics = useMetrics();
   const submitBooking = useSubmitBooking();
 
@@ -118,7 +184,8 @@ export function BookingForm({ regionName }: { regionName: string }) {
     location: '',
     destination: '',
     phone: '',
-    service: '',
+    service: defaultService,
+    vehicle: '',
     timing: 'now',
     scheduledFor: defaultScheduledDate(),
   });
@@ -128,6 +195,8 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmedEta, setConfirmedEta] = useState<number | null>(null);
   const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
+  // The key to the tracking page. Absent when the booking was queued offline.
+  const [confirmedToken, setConfirmedToken] = useState<string | null>(null);
   // Whether the ETA came from a real driver's position. Decides whether the
   // confirmation may claim a dispatch at all.
   const [driverAssigned, setDriverAssigned] = useState(false);
@@ -152,27 +221,27 @@ export function BookingForm({ regionName }: { regionName: string }) {
   const serviceRef = useRef<HTMLSelectElement>(null);
   const confirmRef = useRef<HTMLHeadingElement>(null);
 
-  // Reset the form whenever the visitor navigates to a different region.
+  // Reset the form whenever the visitor navigates to a different page.
   useEffect(() => {
     setFormStep(1);
     setSubmitError(null);
     setConfirmedEta(null);
     setConfirmedPrice(null);
+    setConfirmedToken(null);
     setEstimate(null);
     setEstimateStatus('idle');
-  }, [regionName]);
+    setQuoteData((prev) => ({ ...prev, service: defaultService }));
+  }, [regionName, defaultService]);
 
   // Live driving-distance / tow-time estimate once a pickup and drop-off exist.
   // Debounced, and any in-flight request is aborted when the inputs change.
   const needsDestination = serviceNeedsDestination(quoteData.service);
   const pickup = quoteData.location.trim();
   const dropoff = quoteData.destination.trim();
-  // A tow with nowhere to go can't be quoted or driven, so the button is held
-  // shut until there's a drop-off. The panel above it already says why, and
-  // aria-disabled keeps the button reachable so a screen reader still finds it
-  // and hears the reason, rather than it vanishing from the tab order.
   // Nothing can be dispatched without knowing what the job is, and a tow
-  // needs somewhere to go. The panel above says which is missing.
+  // needs somewhere to go. The panel above says which is missing. The button
+  // is aria-disabled rather than disabled so a screen reader still finds it
+  // and hears the reason, rather than it vanishing from the tab order.
   const missingService = !quoteData.service;
   const missingDropoff = needsDestination && !dropoff;
   const cannotDispatch = missingService || missingDropoff;
@@ -240,7 +309,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
       return;
     }
     const controller = new AbortController();
-    let timer: ReturnType<typeof setInterval> | undefined;
+    let poll: ReturnType<typeof setInterval> | undefined;
 
     const run = async () => {
       let at = pickupPin;
@@ -260,13 +329,15 @@ export function BookingForm({ regionName }: { regionName: string }) {
           if (!controller.signal.aborted) setLiveEta(quote);
         });
       ask();
-      timer = setInterval(ask, ETA_POLL_MS);
+      poll = setInterval(ask, ETA_POLL_MS);
     };
-    void run();
+    // A chosen suggestion needs no geocoding, so it can be asked straight away.
+    const delay = setTimeout(() => void run(), pickupPin ? 0 : ETA_DEBOUNCE_MS);
 
     return () => {
       controller.abort();
-      if (timer) clearInterval(timer);
+      clearTimeout(delay);
+      if (poll) clearInterval(poll);
     };
   }, [pickupPin, pickup]);
 
@@ -293,15 +364,15 @@ export function BookingForm({ regionName }: { regionName: string }) {
   // they are than a reverse-geocode of a coordinate on a slip road.
   const motorway = detectMotorway(quoteData.location) ?? motorwayAtPin;
 
-  // The pickup as the customer would recognise it. Suggestions come back as
-  // long chains ("Kwik Fit, John Street, Fernhill, Bury, BL9 0LD"), which
-  // would swamp the sentence it sits in, so keep the leading parts only.
-  // "Current location (54.9727, -1.6039)" is exactly what the operator wants
-  // to see and exactly what a customer should not be read back.
+  // The pickup as the customer would recognise it. "Current location
+  // (54.9727, -1.6039)" is exactly what the operator wants to see and exactly
+  // what a customer should not be read back.
   const friendlyPickup = /^current location/i.test(quoteData.location.trim())
     ? 'your current location'
     : quoteData.location;
 
+  // Suggestions come back as long chains ("Kwik Fit, John Street, Fernhill,
+  // Bury, BL9 0LD"), which would swamp the sentence it sits in.
   const shortPickup = pickup.split(',').slice(0, 2).join(',').trim() || 'your pickup';
 
   const price = estimatePrice({
@@ -360,6 +431,11 @@ export function BookingForm({ regionName }: { regionName: string }) {
     setFormStep(2);
   };
 
+  const chooseService = (service: string) => {
+    setQuoteData((prev) => ({ ...prev, service }));
+    if (service) track('service_chosen', { service });
+  };
+
   // What the customer was actually shown, and the conditions behind it: the
   // question the operator has is whether a driver being on duty wins the job.
   const quotedRef = useRef<number | null>(null);
@@ -415,6 +491,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
         // the customer typed +447700900123 or 07700-900-123.
         phone: formatPhone(quoteData.phone),
         service: quoteData.service,
+        vehicle: quoteData.vehicle.trim() || undefined,
         timing: quoteData.timing,
         scheduledFor:
           quoteData.timing === 'later' && quoteData.scheduledFor
@@ -427,6 +504,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
       });
       setConfirmedEta(result.eta);
       setDriverAssigned(result.etaSource === 'driver');
+      setConfirmedToken(result.trackToken ?? null);
       track('booking_confirmed', {
         price: price ?? null,
         service: quoteData.service,
@@ -453,13 +531,13 @@ export function BookingForm({ regionName }: { regionName: string }) {
     </p>
   );
 
+  // The address the customer is actually on, not SITE_URL: a link to share has
+  // to open today, and the canonical domain may not be pointed here yet.
+  const origin = typeof window !== 'undefined' ? window.location.origin : SITE_URL;
+  const trackingUrl = confirmedToken ? `${origin}${trackPath(confirmedToken)}` : null;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.4 }}
-      className="bg-neutral-950 text-white rounded-none relative lg:mt-0 mt-4 shadow-xl"
-    >
+    <div className="bg-neutral-950 text-white rounded-none relative lg:mt-0 mt-4 shadow-xl">
       <div className="absolute -top-3 left-5 bg-yellow-400 text-neutral-950 font-black px-3 py-1.5 rounded-none text-[11px] sm:text-xs uppercase tracking-[0.15em] z-20 flex items-center gap-2 border-2 border-neutral-950">
         <div className="w-1.5 h-1.5 bg-red-600 rounded-none animate-pulse"></div>
         {metrics.isLive ? 'Live Dispatch' : '24/7 Dispatch'}
@@ -469,21 +547,14 @@ export function BookingForm({ regionName }: { regionName: string }) {
       <div className="grid grid-cols-2 border-b-2 border-yellow-400 pt-6 sm:pt-7">
         <div className="flex flex-col items-center px-4 py-2.5 sm:py-5 border-r border-neutral-800">
           <div className="text-[10px] sm:text-xs text-red-500 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
-            Avg Response
+            {metrics.measured ? 'Measured Response' : 'Avg Response'}
           </div>
           <div className="font-display text-2xl sm:text-4xl flex items-baseline gap-1 text-yellow-400">
             <CountUp value={metrics.avgResponseMinutes} />
             <span className="text-xs sm:text-sm font-bold text-neutral-500">min</span>
           </div>
         </div>
-        <div className="flex flex-col items-center px-4 py-2.5 sm:py-5">
-          <div className="text-[10px] sm:text-xs text-red-500 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
-            {metrics.isLive ? 'Rescues Today' : 'Rescues / Day'}
-          </div>
-          <div className="font-display text-2xl sm:text-4xl text-white">
-            <CountUp value={metrics.rescuesToday} />
-          </div>
-        </div>
+        <ActivityStat />
       </div>
 
       <div className="p-4 sm:p-7 w-full">
@@ -497,19 +568,21 @@ export function BookingForm({ regionName }: { regionName: string }) {
             this line can't drift out of date. */}
         <p className="text-[11px] sm:text-xs text-neutral-400 font-medium mb-3 sm:mb-5 leading-relaxed">
           From <span className="text-yellow-400 font-bold">{formatPrice(FROM_PRICE)}</span>. You see
-          the full price before you confirm. No hidden fees.
+          the full price before you confirm, then track your driver live. No hidden fees.
         </p>
 
         <div
           className={`relative ${
             formStep === 2
-              ? 'min-h-[380px]'
+              ? 'min-h-[440px]'
               : formStep === 1 && quoteData.timing === 'later'
                 ? 'min-h-[372px]'
                 : 'min-h-[280px]'
           }`}
         >
-          <AnimatePresence mode="wait">
+          {/* `initial={false}`: the first step must render fully visible in
+              the prerendered HTML, not sat at opacity 0 waiting for a script. */}
+          <AnimatePresence mode="wait" initial={false}>
             {formStep === 1 && (
               <motion.div
                 key="step1"
@@ -602,7 +675,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     onChange={(e) => setQuoteData({ ...quoteData, phone: e.target.value })}
                     // Tidy on the way out, so the customer sees the number read
                     // back the way it will be rung — and can spot a typo in it.
-                    onBlur={() => setQuoteData((prev) => ({ ...prev, phone: formatPhone(prev.phone) }))}
+                    onBlur={() =>
+                      setQuoteData((prev) => ({ ...prev, phone: formatPhone(prev.phone) }))
+                    }
                     aria-label="Your phone number"
                   />
                 </div>
@@ -658,7 +733,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     ref={serviceRef}
                     className="w-full pl-12 pr-10 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium appearance-none transition-all"
                     value={quoteData.service}
-                    onChange={(e) => setQuoteData({ ...quoteData, service: e.target.value })}
+                    onChange={(e) => chooseService(e.target.value)}
                     aria-label="What do you need help with?"
                   >
                     <option value="" disabled>
@@ -686,6 +761,23 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     <Navigation className="absolute left-4 w-5 h-5 text-neutral-400 pointer-events-none" />
                   </PlaceInput>
                 )}
+                {/* Optional, and said to be. A driver looking for "silver
+                    Focus, AB12 CDE" finds it; one looking for "a car" does
+                    not. But nobody on a hard shoulder is made to find their
+                    V5C before help is sent. */}
+                <div className="relative">
+                  <Car className="absolute left-4 top-[14px] w-5 h-5 text-neutral-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    maxLength={VEHICLE_MAX_LENGTH}
+                    placeholder="Reg or make & model (optional)"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                    value={quoteData.vehicle}
+                    onChange={(e) => setQuoteData({ ...quoteData, vehicle: e.target.value })}
+                    aria-label="Vehicle registration or make and model (optional)"
+                  />
+                </div>
 
                 {motorway !== null && (
                   // Shown whenever the surcharge applies, so the customer is
@@ -725,8 +817,12 @@ export function BookingForm({ regionName }: { regionName: string }) {
                         No drivers on duty right now
                       </span>
                       <br />
-                      Leave your details and we&apos;ll call you straight back — or ring{' '}
-                      <a href={`tel:${PHONE_TEL}`} className="font-bold text-yellow-400 underline">
+                      Leave your details and we&apos;ll call you straight back, or ring{' '}
+                      <a
+                        href={`tel:${PHONE_TEL}`}
+                        data-call="form-no-drivers"
+                        className="font-bold text-yellow-400 underline"
+                      >
                         {PHONE_DISPLAY}
                       </a>{' '}
                       now.
@@ -817,6 +913,10 @@ export function BookingForm({ regionName }: { regionName: string }) {
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" /> Sending…
                       </>
+                    ) : quoteData.timing === 'later' ? (
+                      <>
+                        Book Collection <ArrowRight className="w-5 h-5" />
+                      </>
                     ) : (
                       <>
                         Request Dispatch <ArrowRight className="w-5 h-5" />
@@ -861,7 +961,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     // someone stranded from ringing anyone else.
                     <>
                       We've got your details for{' '}
-                      <span className="text-yellow-400 font-bold">{quoteData.location}</span>. We'll
+                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>. We'll
                       ring you on{' '}
                       <span className="text-yellow-400 font-bold">{quoteData.phone}</span> to
                       confirm the price, then send a driver.
@@ -873,7 +973,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     <>
                       We&apos;ve got your details for{' '}
                       <span className="text-yellow-400 font-bold">{friendlyPickup}</span>. No driver
-                      is free this second — we&apos;ll contact you as soon as possible on{' '}
+                      is free this second. We&apos;ll contact you as soon as possible on{' '}
                       <span className="text-yellow-400 font-bold">{quoteData.phone}</span>.
                     </>
                   ) : quoteData.timing === 'later' ? (
@@ -904,14 +1004,14 @@ export function BookingForm({ regionName }: { regionName: string }) {
                 {confirmedPrice === null && quoteData.timing === 'now' ? (
                   // Deliberately no ETA: an arrival countdown is the same false
                   // promise as the heading, and the wait hasn't started yet.
-                  <div className="mt-5 flex flex-col items-center gap-1">
+                  <div className="mt-4 flex flex-col items-center gap-1">
                     <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
                       Next step
                     </span>
                     <span className="font-display text-xl text-yellow-400">We'll call you</span>
                   </div>
                 ) : quoteData.timing === 'later' ? (
-                  <div className="mt-5 flex flex-col items-center gap-1">
+                  <div className="mt-4 flex flex-col items-center gap-1">
                     <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
                       Scheduled for
                     </span>
@@ -922,7 +1022,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                 ) : driverAssigned ? (
                   // Measured from where a driver actually is, so it can be
                   // stated as an arrival time.
-                  <div className="mt-5 flex items-baseline gap-2">
+                  <div className="mt-4 flex items-baseline gap-2">
                     <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
                       Arriving in
                     </span>
@@ -932,7 +1032,7 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     <span className="text-neutral-500 font-bold text-sm">min</span>
                   </div>
                 ) : (
-                  <div className="mt-5 flex flex-col items-center gap-1">
+                  <div className="mt-4 flex flex-col items-center gap-1">
                     <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
                       Next step
                     </span>
@@ -941,9 +1041,31 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     </span>
                   </div>
                 )}
+
+                {confirmedToken && trackingUrl ? (
+                  // The "Uber" part. A page that shows the driver who has the
+                  // job, a live ETA and the truck on a map. Offered as a link
+                  // rather than a redirect so the confirmation stays readable.
+                  <div className="mt-5 w-full max-w-xs flex flex-col items-center gap-2">
+                    <Link
+                      to={trackPath(confirmedToken)}
+                      className="w-full bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display py-3.5 rounded-none flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm hover:shadow-md"
+                    >
+                      <Navigation className="w-5 h-5" /> Track your driver
+                    </Link>
+                    <CopyLink url={trackingUrl} />
+                  </div>
+                ) : (
+                  <p className="mt-5 text-[11px] text-neutral-500 max-w-xs">
+                    Your request is saved on this phone and will be sent the moment we have signal.
+                    If you can, ring us so we know you are waiting.
+                  </p>
+                )}
+
                 <a
                   href={`tel:${PHONE_TEL}`}
-                  className="mt-5 text-red-400 hover:text-red-300 font-display text-xs uppercase tracking-wider inline-flex items-center gap-1.5"
+                  data-call="confirmation"
+                  className="mt-4 text-red-400 hover:text-red-300 font-display text-xs uppercase tracking-wider inline-flex items-center gap-1.5"
                 >
                   <PhoneCall className="w-3.5 h-3.5" /> Need to talk? Call {PHONE_DISPLAY}
                 </a>
@@ -958,12 +1080,12 @@ export function BookingForm({ regionName }: { regionName: string }) {
         </p>
         <p className="text-center text-[11px] text-neutral-500 mt-2 leading-relaxed">
           By requesting dispatch you agree we may contact you about your recovery. See our{' '}
-          <a href="/privacy" className="underline hover:text-neutral-300">
+          <Link to="/privacy" className="underline hover:text-neutral-300">
             Privacy Policy
-          </a>
+          </Link>
           .
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 }

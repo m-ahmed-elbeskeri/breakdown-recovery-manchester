@@ -19,15 +19,24 @@ def test_health(client):
     assert client.get("/api/health").json() == {"ok": True}
 
 
-def test_metrics_defaults_when_unseeded(client):
+def test_metrics_are_honest_when_nothing_has_happened(client):
+    """No bookings and nobody on duty is reported as exactly that."""
     body = client.get("/api/metrics").json()
-    assert body == {"rescuesToday": 148, "driversAvailable": 7, "avgResponseMinutes": 24}
+    assert body == {
+        "rescuesToday": 0,
+        "driversAvailable": 0,
+        "avgResponseMinutes": 24,
+        "measured": False,
+    }
 
 
-def test_metrics_reads_seeded_row(client, seed_metric):
+def test_metrics_seed_only_supplies_the_response_time(client, seed_metric):
+    """The seeded rescue and driver counts are ignored; only the average is a seed."""
     seed_metric(rescues=201, drivers=9, avg=20)
     body = client.get("/api/metrics").json()
-    assert body == {"rescuesToday": 201, "driversAvailable": 9, "avgResponseMinutes": 20}
+    assert body["rescuesToday"] == 0
+    assert body["driversAvailable"] == 0
+    assert body["avgResponseMinutes"] == 20
 
 
 def test_create_booking_returns_id_and_eta(client, seed_metric):
@@ -39,14 +48,13 @@ def test_create_booking_returns_id_and_eta(client, seed_metric):
     assert body["eta"] == 22  # from the seeded avg response time
 
 
-def test_booking_is_idempotent_on_request_id(client, seed_metric):
-    seed_metric(rescues=148)
+def test_booking_is_idempotent_on_request_id(client):
     first = client.post("/api/bookings", json=booking_payload(requestId="dup")).json()
     second = client.post("/api/bookings", json=booking_payload(requestId="dup")).json()
 
     assert first["bookingId"] == second["bookingId"]
-    # rescues_today incremented exactly once despite two submits
-    assert client.get("/api/metrics").json()["rescuesToday"] == 149
+    # One booking exists despite two submits
+    assert client.get("/api/metrics").json()["rescuesToday"] == 1
 
 
 def test_create_booking_validates_payload(client):

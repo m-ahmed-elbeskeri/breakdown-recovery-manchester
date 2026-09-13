@@ -1,8 +1,12 @@
-// Custom brand mark for Recovery Mayte — "mayt" as in mate, the one who turns up
-// when you're stuck. So the mark is a friendly face on a round hazard-yellow
-// badge, and the smile *is* a tow hook: the mouth sweeps down and its right tip
-// curls back up into the hook's throat. Recovery kit and a grin in one glyph.
-// Drawn from scratch (not an icon-library glyph) so it reads as a real logo.
+// The brand mark for Car Recovery Near Me: a hazard-yellow map pin, and inside it
+// a tow hook. The pin says "near me" — it is the glyph every phone already
+// uses for "where you are" — and the hook says what turns up. Drawn from
+// scratch rather than an icon-library glyph so it reads as a real logo, and
+// kept to two shapes so it survives being a 16px favicon: at that size it is a
+// yellow pin, which is exactly the right thing to be.
+//
+// Mirrored in public/favicon.svg, public/logo.svg and the brand templates in
+// scripts/brand/. If you change one, change them all.
 
 export function Logo({ className = 'w-10 h-10' }: { className?: string }) {
   return (
@@ -13,17 +17,18 @@ export function Logo({ className = 'w-10 h-10' }: { className?: string }) {
       aria-hidden="true"
       focusable="false"
     >
-      {/* round hazard-yellow badge with a soft dark ring */}
-      <circle cx="24" cy="24" r="22" fill="#f5c518" />
-      <circle cx="24" cy="24" r="22" fill="none" stroke="#0e151d" strokeWidth="3" />
-
-      {/* eyes */}
-      <circle cx="17" cy="19.5" r="2.6" fill="#0e151d" />
-      <circle cx="31" cy="19.5" r="2.6" fill="#0e151d" />
-
-      {/* smile that becomes a tow hook at its right tip */}
+      {/* the pin */}
       <path
-        d="M14.5 27.5 C 17.5 34.5, 27.5 35.5, 31.5 29.5 C 33.2 26.8, 30.2 25.2, 29.8 28.4"
+        d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z"
+        fill="#f5c518"
+        stroke="#0e151d"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      {/* the tow hook: eye, shank, curl */}
+      <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#0e151d" strokeWidth="2.6" />
+      <path
+        d="M26.5 12.8 V19.5 C26.5 25 19 25.5 19 21"
         fill="none"
         stroke="#0e151d"
         strokeWidth="3"

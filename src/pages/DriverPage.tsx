@@ -10,9 +10,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API_BASE } from '../api';
+import { Bell, Star } from '../icons';
 import {
   agoLabel,
   whenLabel,
+  diffJobs,
   DRIVER_KEY_STORAGE,
   fetchDrivers,
   fetchJobs,
@@ -28,13 +30,15 @@ import {
   type Job,
   type JobStatus,
 } from '../driver';
-import { BRAND_WORDMARK } from '../config';
+import { serviceLabel } from '../data';
+import { Wordmark } from '../components/Layout';
 import { InstallApp } from '../components/InstallApp';
+import { useNoIndex } from '../seo';
 
 /** How often to push a new position while on duty. */
 const POSITION_INTERVAL_MS = 20_000;
 /** How often to re-read jobs, so a new booking appears without a refresh. */
-const POLL_MS = 15_000;
+const POLL_MS = 10_000;
 
 /** What each tab shows. "Mine" is the default: it is what the driver is doing. */
 const FILTERS = [
@@ -48,7 +52,62 @@ type FilterKey = (typeof FILTERS)[number]['key'];
 
 const DONE: JobStatus[] = ['complete', 'cancelled'];
 
+interface Alert {
+  id: string;
+  kind: 'new' | 'cancelled';
+  text: string;
+}
+
+/**
+ * Make the phone say something. A job appearing silently in a list on a
+ * phone in a cup holder is a job that gets missed; a taxi app buzzes and so
+ * does this. The chime is synthesised so there is no audio file to fail to
+ * load in a blackspot.
+ */
+function buzz(kind: Alert['kind']) {
+  try {
+    navigator.vibrate?.(kind === 'new' ? [250, 120, 250] : [500]);
+  } catch {
+    /* not supported */
+  }
+  try {
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const notes = kind === 'new' ? [880, 1175] : [440];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.35, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.55);
+    });
+  } catch {
+    /* audio blocked until the first tap; the vibration and banner still fire */
+  }
+}
+
+function systemNotify(title: string, body: string) {
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/icons/icon-192.png', tag: title });
+    }
+  } catch {
+    /* not supported */
+  }
+}
+
 export function DriverPage() {
+  useNoIndex('Driver console');
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(DRIVER_KEY_STORAGE) ?? '');
   const [keyInput, setKeyInput] = useState('');
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -64,9 +123,14 @@ export function DriverPage() {
   // Two taps to delete. A single button next to "Job done" on a phone in a
   // moving cab is a job lost to a misplaced thumb.
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [notifyPermission, setNotifyPermission] = useState<NotificationPermission | 'unsupported'>(
+    () => ('Notification' in window ? Notification.permission : 'unsupported'),
+  );
 
   const me = drivers.find((d) => d.id === meId) ?? null;
   const lastSent = useRef(0);
+  const previousJobs = useRef<Job[] | null>(null);
 
   const load = useCallback(async () => {
     if (!apiKey) return;
@@ -76,6 +140,24 @@ export function DriverPage() {
       setJobs(js);
       setError(null);
       setMeId((current) => (current === null && ds.length > 0 ? ds[0].id : current));
+
+      const { newWaiting, cancelledOnMe } = diffJobs(previousJobs.current, js, meId);
+      previousJobs.current = js;
+      if (newWaiting.length > 0) {
+        buzz('new');
+        const text =
+          newWaiting.length === 1
+            ? `New job: ${serviceLabel(newWaiting[0].service)} at ${newWaiting[0].location}`
+            : `${newWaiting.length} new jobs waiting`;
+        systemNotify('New job waiting', text);
+        setAlerts((a) => [...a, { id: `new-${Date.now()}`, kind: 'new', text }]);
+      }
+      for (const job of cancelledOnMe) {
+        buzz('cancelled');
+        const text = `Customer cancelled job #${job.id} (${job.location}). Stand down.`;
+        systemNotify('Job cancelled', text);
+        setAlerts((a) => [...a, { id: `cancel-${job.id}`, kind: 'cancelled', text }]);
+      }
     } catch (err) {
       setError(
         String(err).includes('401')
@@ -83,13 +165,19 @@ export function DriverPage() {
           : `Could not reach the API at ${API_BASE}.`,
       );
     }
-  }, [apiKey]);
+  }, [apiKey, meId]);
 
   useEffect(() => {
     void load();
     const timer = setInterval(() => void load(), POLL_MS);
     return () => clearInterval(timer);
   }, [load]);
+
+  // Reflect the alert count in the tab title, where a driver glancing at a
+  // phone full of other apps will see it.
+  useEffect(() => {
+    document.title = alerts.length > 0 ? `(${alerts.length}) Driver console` : 'Driver console';
+  }, [alerts.length]);
 
   useEffect(() => {
     if (meId !== null) localStorage.setItem('driver_id', String(meId));
@@ -165,8 +253,13 @@ export function DriverPage() {
     try {
       await setJobStatus(apiKey, job.id, step.next, me.id);
       await load();
-    } catch {
-      setError('Could not update that job. Try again.');
+    } catch (err) {
+      setError(
+        String(err).includes('409')
+          ? 'That job is no longer yours to take. Refreshing.'
+          : 'Could not update that job. Try again.',
+      );
+      await load();
     } finally {
       setBusy(false);
     }
@@ -185,14 +278,18 @@ export function DriverPage() {
     }
   };
 
+  const askNotifications = async () => {
+    if (!('Notification' in window)) return;
+    const result = await Notification.requestPermission();
+    setNotifyPermission(result);
+  };
+
   // ── Key entry ────────────────────────────────────────────────────────────
   if (!apiKey) {
     return (
       <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center px-5">
         <div className="w-full max-w-sm">
-          <div className="font-display text-3xl uppercase tracking-tight mb-1">
-            {BRAND_WORDMARK[0]} <span className="wordmark-paint">{BRAND_WORDMARK[1]}</span>
-          </div>
+          <Wordmark className="text-3xl uppercase block mb-1" />
           <p className="text-neutral-400 text-sm mb-6">Driver console</p>
           <label
             htmlFor="key"
@@ -245,8 +342,8 @@ export function DriverPage() {
   return (
     <main className="min-h-screen bg-neutral-950 text-white pb-16">
       <header className="border-b-2 border-neutral-800 px-5 py-4 flex items-center justify-between gap-4">
-        <Link to="/" className="font-display text-xl uppercase tracking-tight">
-          {BRAND_WORDMARK[0]} <span className="wordmark-paint">{BRAND_WORDMARK[1]}</span>
+        <Link to="/" className="min-w-0">
+          <Wordmark className="text-xl uppercase block whitespace-nowrap" />
         </Link>
         {drivers.length > 1 ? (
           <select
@@ -276,7 +373,58 @@ export function DriverPage() {
           </p>
         )}
 
+        {alerts.map((alert) => (
+          <div
+            key={alert.id}
+            role="status"
+            className={`border-2 px-4 py-3 flex items-start gap-3 ${
+              alert.kind === 'new'
+                ? 'border-yellow-400 bg-yellow-400 text-neutral-950'
+                : 'border-[var(--color-danger)] bg-[var(--color-danger)] text-white'
+            }`}
+          >
+            <Bell className="w-5 h-5 shrink-0 mt-0.5" />
+            <p className="text-sm font-bold flex-1">{alert.text}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setAlerts((a) => a.filter((x) => x.id !== alert.id));
+                if (alert.kind === 'new') setFilter('waiting');
+              }}
+              className="shrink-0 font-display uppercase tracking-wider text-xs underline"
+            >
+              {alert.kind === 'new' ? 'View' : 'OK'}
+            </button>
+          </div>
+        ))}
+
+        {drivers.length === 0 && !error && (
+          <p className="border-2 border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-300">
+            No drivers on the roster yet. Add one in the{' '}
+            <Link to="/admin" className="text-yellow-400 underline">
+              admin page
+            </Link>{' '}
+            and come back.
+          </p>
+        )}
+
         <InstallApp />
+
+        {notifyPermission === 'default' && (
+          <button
+            type="button"
+            onClick={askNotifications}
+            className="border-2 border-neutral-800 bg-neutral-900 px-4 py-3 text-left flex items-center gap-3"
+          >
+            <Bell className="w-5 h-5 text-yellow-400 shrink-0" />
+            <span className="text-sm">
+              <span className="font-bold block">Turn on job alerts</span>
+              <span className="text-neutral-400 text-[12px]">
+                Get a notification when a new job comes in, even with the screen off.
+              </span>
+            </span>
+          </button>
+        )}
 
         {/* ── On duty ─────────────────────────────────────────────────── */}
         <section
@@ -431,6 +579,8 @@ function JobCard({
   const step = NEXT_STATUS[job.status];
   const style = STATUS_STYLE[job.status];
   const finished = job.status === 'complete' || job.status === 'cancelled';
+  // Someone else's live job: shown for awareness, but not something to act on.
+  const someoneElses = !mine && job.driverId !== null && !finished;
 
   return (
     <article className={`border-2 ${style.border} bg-neutral-900 ${finished ? 'opacity-60' : ''}`}>
@@ -439,11 +589,16 @@ function JobCard({
           ⚠ Motorway · live carriageway procedure
         </p>
       )}
+      {job.status === 'cancelled' && job.cancelledBy === 'customer' && (
+        <p className="bg-neutral-800 text-neutral-300 text-[11px] font-black uppercase tracking-wider px-4 py-2">
+          Cancelled by the customer
+        </p>
+      )}
       <div className="p-4 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-bold truncate">{job.service}</div>
-            <div className="flex items-center gap-2 mt-1.5">
+            <div className="font-bold truncate">{serviceLabel(job.service)}</div>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span
                 className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 ${style.chip}`}
               >
@@ -452,7 +607,21 @@ function JobCard({
               <span className="text-xs text-neutral-500 font-medium">
                 #{job.id}
                 {mine && !finished ? ' · yours' : ''}
+                {someoneElses && job.driverName ? ` · ${job.driverName}` : ''}
               </span>
+              {job.rating !== null && (
+                <span
+                  className="inline-flex items-center gap-0.5 text-yellow-400"
+                  aria-label={`Rated ${job.rating} out of 5`}
+                >
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`w-3 h-3 ${n <= (job.rating ?? 0) ? 'fill-yellow-400' : 'opacity-30'}`}
+                    />
+                  ))}
+                </span>
+              )}
             </div>
           </div>
           <div
@@ -495,6 +664,14 @@ function JobCard({
               <dd className="break-words">{job.destination}</dd>
             </>
           )}
+          {job.vehicle && (
+            <>
+              <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
+                Vehicle
+              </dt>
+              <dd className="break-words font-bold">{job.vehicle}</dd>
+            </>
+          )}
           <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
             Phone
           </dt>
@@ -514,6 +691,14 @@ function JobCard({
               <dd>
                 {job.distanceMiles} mi · ~{job.durationMinutes} min
               </dd>
+            </>
+          )}
+          {job.ratingComment && (
+            <>
+              <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
+                Said
+              </dt>
+              <dd className="italic text-neutral-300">“{job.ratingComment}”</dd>
             </>
           )}
         </dl>
@@ -551,7 +736,7 @@ function JobCard({
                 Navigate
               </a>
             )}
-            {step && (
+            {step && !someoneElses && (
               <button
                 type="button"
                 onClick={() => onAdvance(job)}

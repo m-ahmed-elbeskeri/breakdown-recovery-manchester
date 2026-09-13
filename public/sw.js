@@ -6,7 +6,7 @@
 // stale job list or a phantom "on duty" would be worse than an honest error.
 // Job data is live or it is nothing.
 
-const SHELL = 'mayte-shell-v1';
+const SHELL = 'crnm-shell-v2';
 
 // The bare minimum to render the console. Hashed asset files are added as
 // they are fetched, since their names change with every build.

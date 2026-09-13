@@ -1,12 +1,199 @@
-// Region-aware SEO: dynamically updates document title, meta tags, canonical
-// URL and JSON-LD structured data whenever the active region changes.
+// Everything a page puts in <head>: title, description, canonical, social
+// tags and JSON-LD. Built as plain data by pure functions so the same head
+// can be written into the HTML at build time (scripts/prerender.mjs, which
+// is what search engines read) and kept in sync in the browser on navigation.
 
 import { useEffect } from 'react';
-import { SITE_URL, PHONE_TEL, PHONE_DISPLAY, HOME_REGION, BRAND_NAME, slugify } from './config';
-import { buildFaqItems } from './data';
+import {
+  SITE_URL,
+  PHONE_TEL,
+  PHONE_DISPLAY,
+  HOME_REGION,
+  BRAND_NAME,
+  CONTACT_EMAIL,
+  regionPath,
+} from './config';
+import { buildFaqItems, type FaqItem } from './data';
+import { FROM_PRICE } from './pricing';
+import { PRICING_FAQ } from './pricingContent';
+import { PRICING_PATH, matchPage } from './routes';
+import { servicePath, type ServicePage } from './services';
 
-const setMeta = (selector: string, attr: 'name' | 'property', key: string, value: string) => {
-  let tag = document.head.querySelector<HTMLMetaElement>(selector);
+export interface PageSeo {
+  title: string;
+  description: string;
+  /** The canonical path, starting with "/". */
+  path: string;
+  robots?: string;
+  jsonLd: Record<string, unknown>[];
+}
+
+const INDEX_ROBOTS = 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1';
+
+export const absoluteUrl = (path: string): string => `${SITE_URL}${path === '/' ? '/' : path}`;
+
+const opening = [
+  {
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    opens: '00:00',
+    closes: '23:59',
+  },
+];
+
+const faqJsonLd = (items: FaqItem[]) => ({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: items.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.a },
+  })),
+});
+
+const breadcrumbJsonLd = (crumbs: { name: string; path: string }[]) => ({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: crumbs.map((c, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: c.name,
+    item: absoluteUrl(c.path),
+  })),
+});
+
+/** An area page: the homepage for Manchester, /car-recovery-<area> otherwise. */
+export function regionSeo(regionName: string): PageSeo {
+  const isHome = regionName === HOME_REGION;
+  const path = regionPath(regionName);
+  const url = absoluteUrl(path);
+
+  const title = isHome
+    ? `24/7 Car Recovery Manchester | ${BRAND_NAME}`
+    : `Car Recovery ${regionName} | 24/7 Breakdown Recovery Near Me`;
+  const description = isHome
+    ? `Stuck? See your price up front from £${FROM_PRICE}, get a live ETA and track your recovery driver to your door. 24/7 car recovery, towing and roadside help across Greater Manchester. Call ${PHONE_DISPLAY}.`
+    : `24/7 car recovery and breakdown recovery in ${regionName}. Price shown up front from £${FROM_PRICE}, live ETA, and track your driver to your door. Call ${PHONE_DISPLAY}.`;
+
+  const jsonLd: Record<string, unknown>[] = [
+    {
+      '@context': 'https://schema.org',
+      '@type': ['LocalBusiness', 'AutomotiveBusiness'],
+      '@id': `${url}#business`,
+      name: BRAND_NAME,
+      url,
+      telephone: PHONE_TEL,
+      email: CONTACT_EMAIL,
+      priceRange: '££',
+      image: `${SITE_URL}/og-image.png`,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: regionName,
+        addressRegion: 'Greater Manchester',
+        addressCountry: 'GB',
+      },
+      areaServed: { '@type': 'City', name: regionName },
+      openingHoursSpecification: opening,
+    },
+    faqJsonLd(buildFaqItems(regionName)),
+  ];
+  if (!isHome) {
+    jsonLd.push(
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: `Car Recovery ${regionName}`, path },
+      ]),
+    );
+  }
+
+  return { title, description, path, jsonLd };
+}
+
+/** A service page, e.g. /jump-start-near-me. */
+export function serviceSeo(page: ServicePage): PageSeo {
+  const path = servicePath(page);
+  return {
+    title: page.title,
+    description: page.description,
+    path,
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Service',
+        '@id': `${absoluteUrl(path)}#service`,
+        name: page.name,
+        serviceType: page.headline.join(' ').replace(/\.$/, ''),
+        url: absoluteUrl(path),
+        provider: { '@id': `${SITE_URL}/#organization` },
+        areaServed: { '@type': 'AdministrativeArea', name: 'Greater Manchester' },
+        availableChannel: {
+          '@type': 'ServiceChannel',
+          serviceUrl: absoluteUrl(path),
+          servicePhone: { '@type': 'ContactPoint', telephone: PHONE_TEL },
+        },
+        offers: {
+          '@type': 'Offer',
+          priceCurrency: 'GBP',
+          price: page.fromPrice,
+          priceSpecification: {
+            '@type': 'PriceSpecification',
+            priceCurrency: 'GBP',
+            minPrice: page.fromPrice,
+            description: page.priceNote,
+          },
+          availability: 'https://schema.org/InStock',
+        },
+        hoursAvailable: opening,
+      },
+      faqJsonLd(page.faq),
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: page.name, path },
+      ]),
+    ],
+  };
+}
+
+/** The pricing page. */
+export function pricingSeo(): PageSeo {
+  return {
+    title: `Car Recovery Prices Manchester | From £${FROM_PRICE}, No Hidden Fees`,
+    description: `Exactly what breakdown recovery costs in Manchester: callout fees, price per mile, night and motorway rates, with worked examples. See your own price before you book. Call ${PHONE_DISPLAY}.`,
+    path: PRICING_PATH,
+    jsonLd: [
+      faqJsonLd(PRICING_FAQ),
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Prices', path: PRICING_PATH },
+      ]),
+    ],
+  };
+}
+
+/**
+ * The head for any prerendered path, or null for pages that are not public
+ * (tracking, admin, driver, 404). Used by the build; the pages themselves
+ * call the builders above directly.
+ */
+export function seoForPath(pathname: string): PageSeo | null {
+  const match = matchPage(pathname);
+  if (!match) return null;
+  switch (match.kind) {
+    case 'region':
+      return match.legacy ? null : regionSeo(match.region);
+    case 'service':
+      return serviceSeo(match.page);
+    case 'pricing':
+      return pricingSeo();
+    case 'privacy':
+      return null;
+  }
+}
+
+// ── The browser side ────────────────────────────────────────────────────────
+
+const setMeta = (attr: 'name' | 'property', key: string, value: string) => {
+  let tag = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
   if (!tag) {
     tag = document.createElement('meta');
     tag.setAttribute(attr, key);
@@ -25,115 +212,52 @@ const setCanonical = (href: string) => {
   link.setAttribute('href', href);
 };
 
-const setRobots = (value: string) => {
-  setMeta('meta[name="robots"]', 'name', 'robots', value);
+const clearJsonLd = () => {
+  document.head.querySelectorAll('script[data-jsonld]').forEach((el) => el.remove());
 };
 
-const setStructuredData = (id: string, data: Record<string, unknown>) => {
-  let script = document.head.querySelector<HTMLScriptElement>(`script[data-jsonld-id="${id}"]`);
-  if (!script) {
-    script = document.createElement('script');
+/** JSON safe to sit inside a <script> tag. */
+export const jsonLdText = (data: Record<string, unknown>): string =>
+  JSON.stringify(data).replace(/</g, '\\u003c');
+
+/** Write a page's head into the live document. */
+export function applySeo(seo: PageSeo): void {
+  const url = absoluteUrl(seo.path);
+  document.title = seo.title;
+  setMeta('name', 'robots', seo.robots ?? INDEX_ROBOTS);
+  setMeta('name', 'description', seo.description);
+  setCanonical(url);
+  setMeta('property', 'og:title', seo.title);
+  setMeta('property', 'og:description', seo.description);
+  setMeta('property', 'og:url', url);
+  setMeta('name', 'twitter:title', seo.title);
+  setMeta('name', 'twitter:description', seo.description);
+
+  clearJsonLd();
+  for (const data of seo.jsonLd) {
+    const script = document.createElement('script');
     script.type = 'application/ld+json';
-    script.setAttribute('data-jsonld-id', id);
+    script.setAttribute('data-jsonld', '');
+    script.textContent = jsonLdText(data);
     document.head.appendChild(script);
   }
-  script.textContent = JSON.stringify(data);
-};
-
-const removeStructuredData = (id: string) => {
-  document.head.querySelector(`script[data-jsonld-id="${id}"]`)?.remove();
-};
-
-/**
- * Keep the document head in sync with the active region for organic search.
- * Runs on every region change.
- */
-export function useRegionSeo(regionName: string): void {
-  useEffect(() => {
-    const isHome = regionName === HOME_REGION;
-    const canonicalPath = isHome ? '/' : `/breakdown-recovery-${slugify(regionName)}`;
-    const canonicalUrl = `${SITE_URL}${canonicalPath}`;
-
-    const title = `24/7 Breakdown Recovery ${regionName} | ${BRAND_NAME}`;
-    const description = `24/7 breakdown recovery in ${regionName}. Avg 24-min response, fully insured, no hidden fees. Call ${PHONE_DISPLAY} for immediate towing & roadside help.`;
-
-    document.title = title;
-    setRobots('index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1');
-    setMeta('meta[name="description"]', 'name', 'description', description);
-    setCanonical(canonicalUrl);
-
-    setMeta('meta[property="og:title"]', 'property', 'og:title', title);
-    setMeta('meta[property="og:description"]', 'property', 'og:description', description);
-    setMeta('meta[property="og:url"]', 'property', 'og:url', canonicalUrl);
-
-    setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title);
-    setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
-
-    setMeta('meta[name="geo.placename"]', 'name', 'geo.placename', regionName);
-
-    setStructuredData('region-business', {
-      '@context': 'https://schema.org',
-      '@type': ['LocalBusiness', 'AutomotiveBusiness'],
-      '@id': `${canonicalUrl}#business`,
-      name: BRAND_NAME,
-      url: canonicalUrl,
-      telephone: PHONE_TEL,
-      priceRange: '££',
-      image: `${SITE_URL}/og-image.svg`,
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: regionName,
-        addressRegion: 'Greater Manchester',
-        addressCountry: 'GB',
-      },
-      areaServed: { '@type': 'City', name: regionName },
-      openingHoursSpecification: [
-        {
-          '@type': 'OpeningHoursSpecification',
-          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-          opens: '00:00',
-          closes: '23:59',
-        },
-      ],
-    });
-
-    if (!isHome) {
-      setStructuredData('region-breadcrumb', {
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
-          {
-            '@type': 'ListItem',
-            position: 2,
-            name: `Breakdown Recovery ${regionName}`,
-            item: canonicalUrl,
-          },
-        ],
-      });
-    } else {
-      removeStructuredData('region-breadcrumb');
-    }
-
-    setStructuredData('region-faq', {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: buildFaqItems(regionName).map((item) => ({
-        '@type': 'Question',
-        name: item.q,
-        acceptedAnswer: { '@type': 'Answer', text: item.a },
-      })),
-    });
-  }, [regionName]);
 }
 
-/** Mark a page as not-found so search engines don't index soft-404s. */
-export function useNoIndex(): void {
+/** Keep the document head in sync with the page being shown. */
+export function usePageSeo(seo: PageSeo): void {
+  // Dependencies are the parts that can change on navigation; the JSON-LD
+  // follows from them.
   useEffect(() => {
-    document.title = `Page not found | ${BRAND_NAME}`;
-    setRobots('noindex, follow');
-    removeStructuredData('region-business');
-    removeStructuredData('region-breadcrumb');
-    removeStructuredData('region-faq');
-  }, []);
+    applySeo(seo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seo.path, seo.title, seo.description]);
+}
+
+/** Mark a page as private so search engines never index it. */
+export function useNoIndex(title: string): void {
+  useEffect(() => {
+    document.title = `${title} | ${BRAND_NAME}`;
+    setMeta('name', 'robots', 'noindex, nofollow');
+    clearJsonLd();
+  }, [title]);
 }

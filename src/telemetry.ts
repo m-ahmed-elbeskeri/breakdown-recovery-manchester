@@ -13,7 +13,7 @@
 
 import { API_BASE } from './api';
 
-const SESSION_KEY = 'mayte_session';
+const SESSION_KEY = 'crnm_session';
 /** Hold events briefly so a visit costs one request, not twenty. */
 const FLUSH_AFTER_MS = 4000;
 const MAX_BATCH = 20;

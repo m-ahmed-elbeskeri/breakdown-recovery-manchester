@@ -8,7 +8,7 @@ path (failures are logged, not surfaced to the customer).
 import logging
 from datetime import datetime, timezone
 from html import escape
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 from urllib.parse import quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -33,12 +33,14 @@ class BookingDetails(TypedDict):
     service: str
     timing: str
     scheduled_for: str | None
+    vehicle: NotRequired[str | None]
     pickup_lat: float | None
     pickup_lng: float | None
     motorway: bool
     distance_miles: float | None
     duration_minutes: int | None
     price: int | None
+    track_token: NotRequired[str | None]
 
 
 def notifications_enabled() -> bool:
@@ -59,6 +61,13 @@ def maps_url(place: str, lat: float | None = None, lng: float | None = None) -> 
     if lat is not None and lng is not None:
         return f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
     return "https://www.google.com/maps/search/?api=1&query=" + quote(place)
+
+
+def track_url(token: str | None) -> str | None:
+    """The customer's live tracking page, for forwarding to them by text."""
+    if not token:
+        return None
+    return f"{settings.site_url.rstrip('/')}/track/{token}"
 
 
 def tel_uri(phone: str) -> str:
@@ -132,12 +141,14 @@ def render_booking_email(b: BookingDetails) -> tuple[str, str]:
         )
 
     destination_cell = _link(b["destination"], maps_url(b["destination"])) if b["destination"] else "—"
+    tracking = track_url(b.get("track_token"))
 
     rows = [
         ("Service", escape(b["service"])),
         ("When", escape(when)),
         ("Pickup", pickup_cell),
         ("Drop-off", destination_cell),
+        ("Vehicle", escape(b.get("vehicle") or "not given")),
         ("Phone", _link(b["phone"], tel_uri(b["phone"]))),
         ("Tow distance", escape(journey)),
         (
@@ -151,6 +162,15 @@ def render_booking_email(b: BookingDetails) -> tuple[str, str]:
         ("Region", escape(b["region"])),
         ("Booking #", str(b["id"])),
     ]
+    if tracking:
+        rows.append(
+            (
+                "Customer tracking",
+                _link(tracking, tracking)
+                + '<br><span style="color:#6b7280;font-size:12px">'
+                "the customer already has this link; forward it if they ask</span>",
+            )
+        )
     body = "".join(
         f'<tr><td style="padding:6px 12px 6px 0;color:#6b7280;vertical-align:top">{label}</td>'
         f'<td style="padding:6px 0;font-weight:600">{value}</td></tr>'
@@ -188,7 +208,7 @@ def render_booking_email(b: BookingDetails) -> tuple[str, str]:
         f"{buttons}"
         f'<table style="border-collapse:collapse">{body}</table>'
         '<p style="color:#6b7280;font-size:12px;margin-top:16px">'
-        "Call the customer to confirm and dispatch.</p></div>"
+        "Take the job in the driver console so the customer sees you are on the way.</p></div>"
     )
     return subject, html
 

@@ -6,6 +6,7 @@ const base: QuoteData = {
   destination: '',
   phone: '07700 900123',
   service: '',
+  vehicle: '',
   timing: 'now',
   scheduledFor: null,
 };

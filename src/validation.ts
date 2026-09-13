@@ -9,12 +9,17 @@ export interface QuoteData {
   destination: string;
   phone: string;
   service: string;
+  /** Registration or a description of the car. Optional throughout. */
+  vehicle: string;
   timing: 'now' | 'later';
   scheduledFor: Date | null;
 }
 
 /** Grace window so a time chosen a moment ago doesn't fail the "future" check. */
 const SCHEDULE_GRACE_MS = 60_000;
+
+/** Longest vehicle description the API accepts. */
+export const VEHICLE_MAX_LENGTH = 80;
 
 export type QuotePhase = 'contact' | 'full';
 
@@ -45,6 +50,10 @@ export function validateQuote(data: QuoteData, phase: QuotePhase): string | null
   // a blank destination and no price, so it can neither be quoted nor driven.
   if (phase === 'full' && serviceNeedsDestination(data.service) && !data.destination.trim()) {
     return 'Please enter a drop-off address.';
+  }
+
+  if (phase === 'full' && (data.vehicle ?? '').trim().length > VEHICLE_MAX_LENGTH) {
+    return 'Please keep the vehicle description short — a registration or make and model.';
   }
 
   return null;

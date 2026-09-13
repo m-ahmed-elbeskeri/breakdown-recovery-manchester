@@ -28,6 +28,7 @@ export interface Job {
   service: string;
   timing: string;
   scheduledFor: string | null;
+  vehicle: string | null;
   pickupLat: number | null;
   pickupLng: number | null;
   motorway: boolean;
@@ -35,8 +36,17 @@ export interface Job {
   durationMinutes: number | null;
   price: number | null;
   driverId: number | null;
+  driverName: string | null;
   status: JobStatus;
+  trackToken: string | null;
   createdAt: string;
+  acceptedAt: string | null;
+  enRouteAt: string | null;
+  onSceneAt: string | null;
+  finishedAt: string | null;
+  cancelledBy: 'customer' | 'driver' | null;
+  rating: number | null;
+  ratingComment: string | null;
 }
 
 export type JobStatus = 'pending' | 'accepted' | 'en_route' | 'on_scene' | 'complete' | 'cancelled';
@@ -61,6 +71,20 @@ async function call<T>(path: string, key: string, init?: RequestInit): Promise<T
 export const fetchDrivers = (key: string) => call<Driver[]>('/api/drivers', key);
 
 export const fetchJobs = (key: string) => call<Job[]>('/api/bookings?limit=100', key);
+
+export const createDriver = (key: string, name: string, phone: string) =>
+  call<Driver>('/api/drivers', key, {
+    method: 'POST',
+    body: JSON.stringify({ name, phone: phone.trim() || null }),
+  });
+
+export const retireDriver = (key: string, driverId: number) =>
+  fetch(`${API_BASE}/api/drivers/${driverId}`, {
+    method: 'DELETE',
+    headers: { 'x-api-key': key },
+  }).then((res) => {
+    if (!res.ok) throw new Error(`${res.status}`);
+  });
 
 export const setAvailability = (key: string, driverId: number, available: boolean) =>
   call<Driver>(`/api/drivers/${driverId}/state`, key, {
@@ -134,7 +158,7 @@ export const STATUS_STYLE: Record<JobStatus, { label: string; border: string; ch
 };
 
 /** Google Maps link for a pickup — coordinates when we have them, else a search. */
-export function mapsUrl(job: Job): string {
+export function mapsUrl(job: Pick<Job, 'pickupLat' | 'pickupLng' | 'location'>): string {
   if (job.pickupLat !== null && job.pickupLng !== null) {
     return `https://www.google.com/maps/search/?api=1&query=${job.pickupLat},${job.pickupLng}`;
   }
@@ -164,4 +188,32 @@ export function agoLabel(iso: string | null): string {
   const mins = Math.round(seconds / 60);
   if (mins < 60) return `${mins} min ago`;
   return `${Math.round(mins / 60)} hr ago`;
+}
+
+/**
+ * Which jobs have appeared or changed hands since the last look. The console
+ * polls; this is what turns a poll into an alert a driver in a cab notices.
+ */
+export function diffJobs(
+  previous: Job[] | null,
+  current: Job[],
+  meId: number | null,
+): { newWaiting: Job[]; cancelledOnMe: Job[] } {
+  if (previous === null) return { newWaiting: [], cancelledOnMe: [] };
+  const before = new Map(previous.map((j) => [j.id, j]));
+  const newWaiting = current.filter(
+    (j) => j.status === 'pending' && j.driverId === null && !before.has(j.id),
+  );
+  const cancelledOnMe = current.filter((j) => {
+    const was = before.get(j.id);
+    return (
+      j.status === 'cancelled' &&
+      j.cancelledBy === 'customer' &&
+      was !== undefined &&
+      was.status !== 'cancelled' &&
+      was.driverId === meId &&
+      meId !== null
+    );
+  });
+  return { newWaiting, cancelledOnMe };
 }

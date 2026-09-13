@@ -1,0 +1,185 @@
+<!doctype html>
+<!--
+  The social share card (og:image / twitter:image), 1200x630. Rendered to PNG by
+  scripts/render-brand.mjs. A PNG rather than an SVG because Facebook, WhatsApp,
+  LinkedIn and X all ignore SVG share images.
+
+  Text here is deliberately hard-coded rather than read from src/config.ts —
+  this file is opened straight in a browser — so when the phone number or the
+  "from" price changes, change it here too (scripts/render-brand.mjs checks the
+  phone against config.ts and refuses to render on a mismatch).
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@700;800;900&display=block"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        font-family: 'Inter', Arial, sans-serif;
+        color: #fff;
+      }
+      .card {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        background: linear-gradient(180deg, #0d2038 0%, #081525 100%);
+      }
+      .rule {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 10px;
+        background: #f5c518;
+      }
+      .lockup {
+        position: absolute;
+        top: 52px;
+        left: 80px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .lockup svg {
+        width: 68px;
+        height: 68px;
+      }
+      .lockup .name {
+        font-family: 'Anton', 'Arial Narrow', Impact, sans-serif;
+        font-size: 40px;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+      .lockup .name span {
+        color: #f5c518;
+      }
+      .headline {
+        position: absolute;
+        left: 80px;
+        top: 190px;
+        font-family: 'Anton', 'Arial Narrow', Impact, sans-serif;
+        font-size: 92px;
+        line-height: 0.98;
+        letter-spacing: -1px;
+      }
+      .headline .place {
+        display: inline-block;
+        background: #f5c518;
+        color: #0e151d;
+        padding: 6px 14px 4px;
+        margin-top: 12px;
+      }
+      .stats {
+        position: absolute;
+        right: 80px;
+        top: 190px;
+        width: 290px;
+        height: 270px;
+        background: #143050;
+        border: 4px solid #f5c518;
+        box-sizing: border-box;
+        text-align: center;
+        padding-top: 30px;
+      }
+      .stats .label {
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 4px;
+        color: #d8e6f5;
+      }
+      .stats .big {
+        font-family: 'Anton', Impact, sans-serif;
+        font-size: 104px;
+        line-height: 1;
+        color: #f5c518;
+        margin-top: 8px;
+      }
+      .stats .unit {
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: 2px;
+        color: #85aeda;
+        margin-top: 4px;
+      }
+      .stats hr {
+        border: 0;
+        border-top: 2px solid #1b4069;
+        margin: 22px 40px 18px;
+      }
+      .stats .phone {
+        font-family: 'Anton', Impact, sans-serif;
+        font-size: 26px;
+        letter-spacing: 1px;
+        margin-top: 6px;
+      }
+      .byline {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 52px;
+        background: #081525;
+        border-top: 3px solid #f5c518;
+        box-sizing: border-box;
+        padding: 16px 80px 0;
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: 2px;
+        color: #85aeda;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="rule" style="top: 0"></div>
+
+      <div class="lockup">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z"
+            fill="#f5c518"
+            stroke="#0e151d"
+            stroke-width="3"
+            stroke-linejoin="round"
+          />
+          <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#0e151d" stroke-width="2.6" />
+          <path
+            d="M26.5 12.8 V19.5 C26.5 25 19 25.5 19 21"
+            fill="none"
+            stroke="#0e151d"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <div class="name">CAR RECOVERY <span>NEAR ME</span></div>
+      </div>
+
+      <div class="headline">
+        CAR<br />
+        RECOVERY<br />
+        <span class="place">MANCHESTER.</span>
+      </div>
+
+      <div class="stats">
+        <div class="label">AVG RESPONSE</div>
+        <div class="big">24</div>
+        <div class="unit">MINUTES</div>
+        <hr />
+        <div class="label" style="font-size: 12px; letter-spacing: 3px">CALL NOW</div>
+        <div class="phone">07442 384141</div>
+      </div>
+
+      <div class="byline">24/7 · PRICE UP FRONT · TRACK YOUR DRIVER LIVE · FROM £55</div>
+    </div>
+  </body>
+</html>

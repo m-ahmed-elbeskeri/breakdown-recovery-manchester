@@ -28,6 +28,12 @@ def test_render_includes_key_details():
     assert "Bolton" in html
 
 
+def test_render_includes_vehicle_and_tracking_link():
+    _, html = render_booking_email(_details(vehicle="AB12 CDE", track_token="tok123"))
+    assert "AB12 CDE" in html
+    assert "/track/tok123" in html
+
+
 def test_render_handles_missing_optionals():
     _, html = render_booking_email(
         _details(destination=None, distance_miles=None, duration_minutes=None, price=None)

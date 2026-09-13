@@ -10,9 +10,13 @@ import type { ReactNode } from 'react';
 import { API_BASE } from './api';
 
 export interface DispatchMetrics {
+  /** Drivers on duty right now (real when `isLive`). */
   driversAvailable: number;
   avgResponseMinutes: number;
+  /** Bookings taken in the last 24 hours (real when `isLive`). */
   rescuesToday: number;
+  /** True once the response time is measured from real jobs, not seeded. */
+  measured: boolean;
   /**
    * True only when these figures come from the real backend. When false the
    * numbers are representative/simulated, so the UI must not present them as
@@ -28,6 +32,7 @@ const INITIAL: DispatchMetrics = {
   driversAvailable: 7,
   avgResponseMinutes: 24,
   rescuesToday: 32,
+  measured: false,
   isLive: false,
 };
 
@@ -55,6 +60,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
           driversAvailable: data.driversAvailable,
           avgResponseMinutes: data.avgResponseMinutes,
           rescuesToday: data.rescuesToday,
+          measured: data.measured === true,
           isLive: true,
         });
       } catch {

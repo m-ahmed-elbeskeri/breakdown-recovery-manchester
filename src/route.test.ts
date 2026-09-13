@@ -47,13 +47,21 @@ describe('estimateJourney', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   /**
-   * Routes OSRM calls to `legs`, and any geocode (the base postcode is text, so
-   * it always resolves through Nominatim) to a fixed depot coordinate.
+   * Routes OSRM calls to `legs`, and any geocode (the base is a full postcode,
+   * so it resolves through postcodes.io; free text goes to Nominatim) to a
+   * fixed depot coordinate.
    */
   const mockFetch = (legs: Array<{ distance: number; duration: number }> | null) =>
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation((url: string) => {
+        if (url.includes('postcodes.io')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ result: { latitude: 53.4864, longitude: -2.2814 } }),
+          });
+        }
         if (url.includes('nominatim')) {
           return Promise.resolve({
             ok: true,
@@ -111,13 +119,17 @@ describe('estimateJourney', () => {
   it('throws on an HTTP error so callers can show a fallback', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockImplementation((url: string) =>
-          url.includes('nominatim')
+      vi.fn().mockImplementation((url: string) =>
+        url.includes('postcodes.io')
+          ? Promise.resolve({
+              ok: true,
+              status: 200,
+              json: async () => ({ result: { latitude: 53.4864, longitude: -2.2814 } }),
+            })
+          : url.includes('nominatim')
             ? Promise.resolve({ ok: true, json: async () => [{ lat: '53.4839', lon: '-2.3078' }] })
             : Promise.resolve({ ok: false, status: 503 }),
-        ),
+      ),
     );
 
     await expect(estimateJourney('53.47, -2.23', '53.57, -2.42')).rejects.toThrow(/routing failed/);
@@ -180,7 +192,12 @@ describe('suggestPlaces', () => {
 
   it('lists places in the typed postcode ahead of lookalikes', async () => {
     mockPhoton([
-      feature(52.0, -1.0, { osm_key: 'amenity', osm_value: 'shop', name: 'M22 Motors', city: 'Leeds' }),
+      feature(52.0, -1.0, {
+        osm_key: 'amenity',
+        osm_value: 'shop',
+        name: 'M22 Motors',
+        city: 'Leeds',
+      }),
       feature(53.4, -2.26, { osm_key: 'place', osm_value: 'postcode', postcode: 'M22 4AN' }),
       feature(53.39, -2.2, { osm_key: 'place', osm_value: 'postcode', postcode: 'M2 2AA' }),
     ]);
@@ -203,7 +220,10 @@ describe('geocoding a bare postcode district', () => {
         });
       }
       if (url.includes('nominatim')) {
-        return Promise.resolve({ ok: true, json: async () => [{ lat: '53.4839', lon: '-2.3078' }] });
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ lat: '53.4839', lon: '-2.3078' }],
+        });
       }
       return Promise.resolve({
         ok: true,
@@ -223,13 +243,100 @@ describe('geocoding a bare postcode district', () => {
   it('finds no place for a district that does not exist', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation((url: string) =>
-        url.includes('postcodes.io')
-          ? Promise.resolve({ ok: false, status: 404 })
-          : Promise.resolve({ ok: true, json: async () => [{ lat: '53.4839', lon: '-2.3078' }] }),
-      ),
+      vi
+        .fn()
+        .mockImplementation((url: string) =>
+          url.includes('postcodes.io')
+            ? Promise.resolve({ ok: false, status: 404 })
+            : Promise.resolve({ ok: true, json: async () => [{ lat: '53.4839', lon: '-2.3078' }] }),
+        ),
     );
     expect(await estimateJourney('ZZ9', null)).toBeNull();
+  });
+});
+
+describe('geocoding a full postcode', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // Nominatim answered "M1 1AA" with the M1 motorway in Leicestershire and
+  // priced a city-centre jump start as a 130-mile run. Royal Mail data knows
+  // where every postcode is; the general geocoder is never asked.
+  it('asks postcodes.io for "M1 1AA" and never Nominatim', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('postcodes.io/postcodes/')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ result: { latitude: 53.487378, longitude: -2.227194 } }),
+        });
+      }
+      if (url.includes('nominatim')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ lat: '52.4135', lon: '-1.1829' }],
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ routes: [{ legs: [{ distance: 4000, duration: 600 }] }] }),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await estimateJourney('M1 1AA', null);
+
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls.some((u) => u.includes('postcodes.io/postcodes/M1%201AA'))).toBe(true);
+    expect(urls.some((u) => u.includes('nominatim') && u.includes('1AA'))).toBe(false);
+    expect(urls.find((u) => u.includes('router.project-osrm.org'))).toContain(
+      '-2.227194,53.487378',
+    );
+  });
+
+  it('treats a postcode Royal Mail has never heard of as no place at all', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation((url: string) =>
+          url.includes('postcodes.io')
+            ? Promise.resolve({ ok: false, status: 404 })
+            : Promise.resolve({ ok: true, json: async () => [{ lat: '52.4135', lon: '-1.1829' }] }),
+        ),
+    );
+    expect(await estimateJourney('ZZ9 9ZZ', null)).toBeNull();
+  });
+
+  it('falls back to the general geocoder only when the postcode service is down', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('postcodes.io/postcodes/')) {
+        return Promise.resolve({ ok: false, status: 503 });
+      }
+      if (url.includes('postcodes.io/outcodes/')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ result: { latitude: 53.4864, longitude: -2.2814 } }),
+        });
+      }
+      if (url.includes('nominatim')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ lat: '53.4873', lon: '-2.2271' }],
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ routes: [{ legs: [{ distance: 4000, duration: 600 }] }] }),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await estimateJourney('M4 4BB', null);
+
+    expect(result).not.toBeNull();
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls.some((u) => u.includes('nominatim') && u.includes('4BB'))).toBe(true);
   });
 });
 

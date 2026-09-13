@@ -1,9 +1,16 @@
 // Site-wide constants and region routing helpers — the single source of truth
 // for anything that appears in more than one place (phone number, URL, regions).
 
-export const SITE_URL = 'https://breakdown-recovery-manchester.co.uk';
+/**
+ * The live domain. carrecoverynearme.uk was unregistered at Nominet on
+ * 2026-09-13 (the .co.uk is taken, as are recoverynearme.co.uk and .uk). It is
+ * an exact match for "car recovery near me", the most-searched recovery phrase
+ * in the UK, which is the whole reason for the name.
+ */
+export const SITE_URL = 'https://carrecoverynearme.uk';
 export const PHONE_TEL = '+447442384141';
 export const PHONE_DISPLAY = '07442 384141';
+export const CONTACT_EMAIL = 'hello@carrecoverynearme.uk';
 export const HOME_REGION = 'Manchester';
 
 /**
@@ -14,14 +21,21 @@ export const HOME_REGION = 'Manchester';
  */
 export const BASE_LOCATION = 'M6 5UA';
 
-/** The trading name. Used in titles, structured data and the copyright line. */
-export const BRAND_NAME = 'Recovery Mayte';
+/**
+ * The trading name. Used in titles, structured data and the copyright line.
+ * Chosen for search intent: "car recovery near me" is what a stranded driver
+ * actually types, and the name answers it.
+ */
+export const BRAND_NAME = 'Car Recovery Near Me';
+
+/** One line under the name, for the driver app and social cards. */
+export const BRAND_TAGLINE = 'Price up front. Track your driver to your door.';
 
 /**
  * The wordmark, split so the second half can be accented in a different colour.
  * Rendered as `{BRAND_WORDMARK[0]}<span class="wordmark-paint">{BRAND_WORDMARK[1]}</span>`.
  */
-export const BRAND_WORDMARK = ['RECOVERY', 'MAYTE!'] as const;
+export const BRAND_WORDMARK = ['CAR RECOVERY', 'NEAR ME'] as const;
 
 /** Every area we serve. The first entry is the homepage region. */
 export const REGIONS = [
@@ -67,18 +81,35 @@ export type Region = (typeof REGIONS)[number];
 
 export const slugify = (text: string): string => text.toLowerCase().replace(/ /g, '-');
 
-/** The URL path for a region ('/' for the home region, '/breakdown-recovery-x' otherwise). */
+/**
+ * The URL prefix for an area page. "car-recovery-bolton" puts the phrase
+ * people search for in the URL itself. The old "breakdown-recovery-" prefix
+ * is still accepted by `regionFromSlug` and 301-redirected by public/_redirects
+ * so nothing that was ever linked goes dead.
+ */
+export const REGION_PATH_PREFIX = 'car-recovery-';
+const LEGACY_REGION_PREFIX = 'breakdown-recovery-';
+
+/** The URL path for a region ('/' for the home region, '/car-recovery-x' otherwise). */
 export const regionPath = (region: string): string =>
-  region === HOME_REGION ? '/' : `/breakdown-recovery-${slugify(region)}`;
+  region === HOME_REGION ? '/' : `/${REGION_PATH_PREFIX}${slugify(region)}`;
 
 /**
- * Resolve a route slug (e.g. "breakdown-recovery-bolton") to its canonical
- * region name, or `null` if the slug does not correspond to a served area.
- * Returning `null` lets the router render a real 404 instead of silently
- * falling back to Manchester (which would create soft-404 duplicate pages).
+ * Resolve a route slug (e.g. "car-recovery-bolton") to its canonical region
+ * name, or `null` if the slug does not correspond to a served area. Returning
+ * `null` lets the router render a real 404 instead of silently falling back to
+ * Manchester (which would create soft-404 duplicate pages).
  */
 export const regionFromSlug = (slug: string | undefined): Region | null => {
   if (!slug) return HOME_REGION;
-  const clean = slug.replace(/^breakdown-recovery-/, '');
+  if (!slug.startsWith(REGION_PATH_PREFIX) && !slug.startsWith(LEGACY_REGION_PREFIX)) return null;
+  const clean = slug.replace(REGION_PATH_PREFIX, '').replace(LEGACY_REGION_PREFIX, '');
   return REGIONS.find((r) => slugify(r) === clean) ?? null;
 };
+
+/** Whether a slug uses the old prefix and should be redirected to `regionPath`. */
+export const isLegacyRegionSlug = (slug: string | undefined): boolean =>
+  !!slug && slug.startsWith(LEGACY_REGION_PREFIX);
+
+/** The customer's live tracking page for a booking. */
+export const trackPath = (token: string): string => `/track/${token}`;

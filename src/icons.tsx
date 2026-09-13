@@ -41,6 +41,10 @@ import {
   ClockRotateRight as I_ClockRotateRight,
   DeliveryTruck as I_DeliveryTruck,
   Coins as I_Coins,
+  Copy as I_Copy,
+  Check as I_Check,
+  MapPin as I_PinMark,
+  Bell as I_Bell,
 } from 'iconoir-react';
 import type { ComponentType, SVGProps } from 'react';
 
@@ -100,3 +104,7 @@ export const ChevronUp = bold(I_NavArrowUp);
 export const ClockRound = bold(I_ClockRotateRight);
 export const DeliveryTruck = bold(I_DeliveryTruck);
 export const Coins = bold(I_Coins);
+export const Copy = bold(I_Copy);
+export const Check = bold(I_Check);
+export const Pin = bold(I_PinMark);
+export const Bell = bold(I_Bell);

@@ -1,6 +1,6 @@
 {
-  "name": "Recovery Mayte Driver",
-  "short_name": "Mayte Driver",
+  "name": "Car Recovery Near Me Driver",
+  "short_name": "CRNM Driver",
   "description": "Go on duty, take jobs and navigate to pickups.",
   "id": "/driver",
   "start_url": "/driver",

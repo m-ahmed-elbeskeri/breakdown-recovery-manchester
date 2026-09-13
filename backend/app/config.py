@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     admin_api_key: str = "change-me"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:5180,http://localhost:5180"
 
+    # Where the customer-facing site lives. Used to build the tracking link in
+    # the operator's booking alert, so it can be forwarded straight to the
+    # customer by text.
+    site_url: str = "https://carrecoverynearme.uk"
+
     # Email alerts on new bookings (via Resend — https://resend.com, free tier).
     # Leave RESEND_API_KEY empty to disable notifications entirely.
     resend_api_key: str = ""

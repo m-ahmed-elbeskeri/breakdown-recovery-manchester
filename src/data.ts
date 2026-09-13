@@ -2,7 +2,8 @@
 // so copy can be edited in one place and reused by both the rendered UI and the
 // structured-data (JSON-LD) layer without the two drifting apart.
 
-import { ClockRound, ShieldCheck, DeliveryTruck, Coins, Zap, Truck, Warehouse } from './icons';
+import { ClockRound, ShieldCheck, Navigation, Coins, Zap, Truck, Warehouse } from './icons';
+import { FROM_PRICE } from './pricing';
 import type { ComponentType } from 'react';
 
 type IconType = ComponentType<{ className?: string }>;
@@ -16,9 +17,9 @@ export interface TrustItem {
 // "the whole UK"; a star says "highly rated", not "cheap".
 export const TRUST_ITEMS: TrustItem[] = [
   { text: '24/7 Availability', icon: ClockRound },
+  { text: 'Price Up Front', icon: Coins },
+  { text: 'Live Driver Tracking', icon: Navigation },
   { text: 'Fully Insured', icon: ShieldCheck },
-  { text: 'UK Wide Transport', icon: DeliveryTruck },
-  { text: 'Low Cost Guarantee', icon: Coins },
 ];
 
 export interface FeaturedService {
@@ -28,6 +29,8 @@ export interface FeaturedService {
   icon: IconType;
   image: string;
   imageAlt: string;
+  /** A service page to link to; otherwise the CTA scrolls to the form. */
+  href?: string;
   featured?: boolean;
 }
 
@@ -40,6 +43,7 @@ export const FEATURED_SERVICES: FeaturedService[] = [
     image:
       'https://images.unsplash.com/photo-1673187139211-1e7ec3dd60ec?auto=format&fit=crop&w=800&q=70',
     imageAlt: 'Car secured on a flatbed recovery truck',
+    href: '/vehicle-transport-manchester',
   },
   {
     title: '12 Volt Jump Start',
@@ -49,6 +53,7 @@ export const FEATURED_SERVICES: FeaturedService[] = [
     image:
       'https://images.unsplash.com/photo-1597766380552-36f5c673637a?auto=format&fit=crop&w=800&q=70',
     imageAlt: 'Red and black jump-start cables clamped to a car battery',
+    href: '/jump-start-near-me',
     featured: true,
   },
   {
@@ -66,6 +71,8 @@ export interface GridService {
   name: string;
   image: string;
   imageAlt: string;
+  /** A service page to link to; otherwise the tile scrolls to the form. */
+  href?: string;
 }
 
 const unsplash = (id: string) =>
@@ -76,46 +83,55 @@ export const GRID_SERVICES: GridService[] = [
     name: 'Roadside Assistance',
     image: unsplash('1692630242208-b1eaa353d80d'),
     imageAlt: 'Cars parked along a British terraced street',
+    href: '/breakdown-recovery-manchester',
   },
   {
     name: '12 Volts Jumpstart',
     image: unsplash('1597766380552-36f5c673637a'),
     imageAlt: 'Jump-start cables clamped to a car battery',
+    href: '/jump-start-near-me',
   },
   {
     name: 'Out of Fuel',
     image: unsplash('1644246905181-c3753e9a82bd'),
     imageAlt: 'Refuelling a car at a fuel pump',
+    href: '/out-of-fuel-near-me',
   },
   {
     name: 'Towing Service',
     image: unsplash('1673187139211-1e7ec3dd60ec'),
     imageAlt: 'Car secured on a flatbed recovery truck',
+    href: '/tow-truck-near-me',
   },
   {
     name: 'Tyre Fitting',
     image: unsplash('1578583444814-badeb909a1b6'),
     imageAlt: 'Technician fitting a wheel with a wrench',
+    href: '/flat-tyre-near-me',
   },
   {
     name: 'Flat Tyre Repair',
     image: unsplash('1507241698564-b4f07193ad5b'),
     imageAlt: 'Close-up of a flat, deflated car tyre',
+    href: '/flat-tyre-near-me',
   },
   {
-    name: 'Low Cost Recovery',
+    name: 'Motorway Recovery',
     image: unsplash('1730514784243-f0e7f09c9f50'),
     imageAlt: 'Tow truck recovering a car on the road',
+    href: '/motorway-recovery-manchester',
   },
   {
     name: 'Electric Vehicle Recovery',
     image: unsplash('1673337188103-c196140adebd'),
     imageAlt: 'Electric car plugged into a charging point',
+    href: '/electric-car-recovery-manchester',
   },
   {
     name: 'Motorbike Recovery',
     image: unsplash('1695013147209-1516a20f0cdd'),
     imageAlt: 'Motorbike parked at the side of the road',
+    href: '/motorbike-recovery-manchester',
   },
   {
     name: 'Sand or Mud Pull Out',
@@ -123,14 +139,16 @@ export const GRID_SERVICES: GridService[] = [
     imageAlt: 'Car stuck in mud on a dirt track',
   },
   {
-    name: 'Battery Replacement',
+    name: 'Auction Collection',
     image: unsplash('1676337167752-2062c6ca7366'),
     imageAlt: 'A 12-volt car battery with red and black terminals',
+    href: '/vehicle-transport-manchester',
   },
   {
     name: '24/7 Breakdown Recovery',
     image: unsplash('1636822236663-6e91a61ec4ac'),
     imageAlt: 'Car tail lights glowing at night',
+    href: '/breakdown-recovery-manchester',
   },
 ];
 
@@ -154,7 +172,7 @@ export const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      'Van packed in on the M60 near junction 25. Waited about 40 minutes which felt like a lifetime sat on the hard shoulder, but he rang me twice on the way to say where he was and that made a big difference. Got it to my garage in Stockport the same evening and the price was what he said on the phone.',
+      'Van packed in on the M60 near junction 25. Waited about 40 minutes which felt like a lifetime sat on the hard shoulder, but the tracking page showed the truck moving towards me the whole time and that made a big difference. Got it to my garage in Stockport the same evening and the price was what it said on the screen.',
     name: 'Imran A.',
     area: 'Stockport',
     service: 'Vehicle Towing',
@@ -194,6 +212,21 @@ export const SERVICE_OPTIONS: ServiceOption[] = [
   { value: 'other', label: "I'm not sure / Other", needsDestination: true },
 ];
 
+/** The customer-facing name of a service value, e.g. "jumpstart" → "Jump start". */
+export const SERVICE_LABELS: Record<string, string> = {
+  towing: 'Breakdown recovery',
+  tow: 'Tow',
+  jumpstart: 'Jump start',
+  tyre: 'Flat tyre',
+  fuel: 'Out of fuel',
+  ev: 'Electric car recovery',
+  motorbike: 'Motorbike recovery',
+  auction: 'Auction collection',
+  other: 'Recovery',
+};
+
+export const serviceLabel = (value: string): string => SERVICE_LABELS[value] ?? value;
+
 /**
  * Whether a service requires a drop-off address. Unknown services default to
  * `true`: a tow with nowhere to go is the costly mistake, so the safe guess is
@@ -216,19 +249,23 @@ export interface FaqItem {
 export const buildFaqItems = (regionName: string): FaqItem[] => [
   {
     q: `How quickly can you reach me in ${regionName}?`,
-    a: `Average response time across ${regionName} is 24 minutes. Most calls are reached within 30 minutes during peak hours, dispatched from the nearest available recovery vehicle.`,
+    a: `Average response time across ${regionName} is 24 minutes. The booking form shows you a live wait measured from where the nearest available driver actually is, and once your job is taken you can track the driver to your door.`,
   },
   {
-    q: 'How much does breakdown recovery cost?',
-    a: 'We offer transparent flat-rate pricing with a low cost guarantee. Quotes are agreed upfront before dispatch, with no hidden fees, surge pricing, or callout charges added afterwards.',
+    q: 'How much does car recovery cost?',
+    a: `Roadside jobs are a flat fee from £${FROM_PRICE} and tows are a callout plus a per-mile rate. You see your exact price on screen before you confirm, with no hidden fees, surge pricing or callout charges added afterwards. The full tariff is on our prices page.`,
+  },
+  {
+    q: 'Can I track my recovery driver?',
+    a: 'Yes. Every booking comes with a live tracking page showing who has your job, a real ETA, and the driver on a map once they set off. You can cancel from the same page if your plans change.',
   },
   {
     q: `Do you operate 24 hours a day in ${regionName}?`,
-    a: `Yes — we dispatch 24 hours a day, 365 days a year across ${regionName} and all of Greater Manchester, including bank holidays, weekends, and overnight.`,
+    a: `Yes, we dispatch 24 hours a day, 365 days a year across ${regionName} and all of Greater Manchester, including bank holidays, weekends and overnight.`,
   },
   {
     q: 'Can you recover electric vehicles and motorbikes?',
-    a: 'Yes. Our flatbed recovery fleet is suitable for electric vehicles, hybrids, motorbikes, and high-end cars where towing on the wheels is not safe.',
+    a: 'Yes. Our flatbed recovery fleet is suitable for electric vehicles, hybrids, motorbikes and high-end cars where towing on the wheels is not safe.',
   },
   {
     q: 'Are you fully insured to tow my vehicle?',
@@ -236,6 +273,6 @@ export const buildFaqItems = (regionName: string): FaqItem[] => [
   },
   {
     q: 'Do you attend motorway breakdowns?',
-    a: 'Yes, we attend breakdowns on all motorways across Greater Manchester including the M60, M61, M62, M66, and M67, working alongside Highways England traffic officers when required.',
+    a: 'Yes, we attend breakdowns on all motorways across Greater Manchester including the M60, M61, M62, M66 and M67, working alongside National Highways traffic officers when required.',
   },
 ];

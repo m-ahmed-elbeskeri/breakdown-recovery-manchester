@@ -1,4 +1,4 @@
-# Recovery Mayte — brand toolbox
+# Car Recovery Near Me — brand toolbox
 
 The design system for the site. **`src/index.css` is the single source of truth**
 — every value below is defined there as a CSS custom property. Change it there
@@ -8,26 +8,40 @@ and the whole site follows. Do not hard-code hex values in components.
 
 ## 1. The name
 
-**Recovery Mayte.** "Mayte" as in _mate_ — the one who turns up when you're stuck.
-That word does a lot of work and the rest of the system has to earn it: a
-customer meets this brand on the worst ten minutes of their week, on a phone, at
-the side of a road. Everything below is chosen to **lower** their pulse, not
-raise it.
+**Car Recovery Near Me.** Chosen for search intent, not cleverness: "car
+recovery near me" is the single most-searched recovery phrase in the UK, and
+the name answers it. It is also what a stranded person is actually thinking.
 
-Written as `Recovery Mayte` in prose. Set as a two-part wordmark in the UI:
-`RECOVERY` in ink, `MAYT` in the accent colour. Defined once in
-`src/config.ts` as `BRAND_NAME` and `BRAND_WORDMARK`.
+The domain is **carrecoverynearme.uk**. Checked at Nominet on 13 September
+2026: the `.uk` was unregistered; the `.co.uk` was taken, as were
+`recoverynearme.co.uk` and `recoverynearme.uk` (the latter parked by a domain
+investor). `breakdownnearme.co.uk` and `.uk` were both free but "breakdown"
+carries far less search volume, so the decision went to the phrase people use.
+
+Written as `Car Recovery Near Me` in prose. Set as a two-part wordmark in the
+UI: `CAR RECOVERY` in ink, `NEAR ME` painted in the accent colour. Defined once
+in `src/config.ts` as `BRAND_NAME` and `BRAND_WORDMARK`.
 
 ### The mark
 
-A round hazard-yellow badge with a face, where **the smile is a tow hook** — the
-mouth sweeps down and its right tip curls back up into the hook's throat.
-Recovery kit and a grin in one glyph. Round, not square, because rounded shapes
-read as friendly and the square badge read as a contractor's logo.
+A **map pin with a tow hook inside**. The pin is the glyph every phone already
+uses for "where you are", which is the "near me"; the hook is what turns up.
+Two shapes, so it survives being a 16px favicon (at which size it is simply a
+yellow pin, which is the right thing to be).
 
 Lives in `src/components/Logo.tsx`, mirrored in `public/favicon.svg`,
-`public/logo.svg` and `public/og-image.svg`. **If you change one, change all
-four** — they are separate files and will drift.
+`public/logo.svg` and the templates in `scripts/brand/`. **If you change one,
+change them all** — they are separate files and will drift.
+
+### Rendered assets
+
+`public/og-image.png` (the share card) and `public/icons/*.png` are rendered
+from `scripts/brand/og-image.html` and `scripts/brand/icon.html` by
+`npm run brand:assets`, which drives whatever Chrome or Edge is installed. They
+are PNGs because Facebook, WhatsApp, LinkedIn and X ignore SVG share images and
+iOS ignores SVG touch icons. Re-run only when the mark, phone number or "from"
+price changes; the script refuses to render a card whose phone number does not
+match `src/config.ts`.
 
 ---
 
@@ -76,11 +90,9 @@ validation failures alone.
 | `slate/neutral-900` | `#18202a` | Darker panel surfaces                 |
 | `slate/neutral-950` | `#0e151d` | Primary dark panel, headings on light |
 
-**`slate-*` and `neutral-*` resolve to the same ramp on purpose.** The original
-build mixed cool `slate`, pure `neutral` and blue `navy` — three different
-colour families — which is what made the page look muddy. Every neutral here is
-mixed toward navy (hue ≈ 213), so a light section and a dark panel are visibly
-the same family.
+**`slate-*` and `neutral-*` resolve to the same ramp on purpose.** Every
+neutral here is mixed toward navy (hue ≈ 213), so a light section and a dark
+panel are visibly the same family.
 
 ### Navy
 
@@ -128,16 +140,6 @@ the system in `index.css`:
 
 New work should use `navy-*`, `yellow-*` and `slate-*` directly.
 
-### Contrast
-
-All combinations in use meet WCAG AA. The ones to watch:
-
-- `neutral-400` on `neutral-950` — 6.5:1 ✓
-- `navy-700` on white — 10.7:1 ✓
-- `neutral-950` on `yellow-400` — 13:1 ✓
-- white on `navy-900` — 16:1 ✓
-- `neutral-400` on white — 3.0:1 ✗ — large/decorative text only
-
 ---
 
 ## 3. Type
@@ -153,12 +155,9 @@ Ultra-condensed heavy grotesque. It is loud, and loudness is a limited resource.
 2. The closing CTA headline
 3. Big call-to-action buttons
 
-Always uppercase, always `tracking-tight`.
-
-Do **not** use it for section headings. When every heading was Anton in all
-caps, the page read as a construction hoarding, and all-caps removes word-shape
-cues — measurably slower to read, which is the wrong trade for someone stressed
-and scanning one-handed.
+Always uppercase, always `tracking-tight`. Do **not** use it for section
+headings: all-caps removes word-shape cues, which is the wrong trade for someone
+stressed and scanning one-handed.
 
 ### Inter — `font-sans`
 
@@ -172,15 +171,11 @@ Everything else. Neutral, highly legible at small sizes, excellent in forms.
 | Eyebrow labels   | 900 (`font-black`), `tracking-[0.3em]` | UPPERCASE  |
 | Stat figures     | 900                                    | —          |
 
-Small uppercase labels are fine — they're labels, not reading matter.
-
 ---
 
 ## 4. Surface and depth
 
-**No hard offset shadows.** The original build used `shadow-[Npx_Npx_0_0_#…]`
-on cards, buttons and panels — a brutalist doubled-edge effect. At volume it
-made every element look duplicated and it was distracting. Use soft elevation:
+**No hard offset shadows.** Use soft elevation:
 
 | Level                           | Use           |
 | ------------------------------- | ------------- |
@@ -196,12 +191,15 @@ Corners stay square (`rounded-none`) — that's the industrial edge worth keepin
 
 Motion is decoration; nobody stranded is enjoying it.
 
-- **No scrolling ticker, no crawling caution tape.** Both were removed. The
-  dispatch tape is a static strip; `.hazard-stripes` is a solid yellow rule, not
-  a diagonal gradient.
-- **Reveal-on-scroll is disabled below 640px** (`src/components/motion.tsx`).
-  Flicking quickly down a phone outruns the fade and sections land blank, which
-  reads as a broken page.
+- **Nothing above the fold animates in.** The hero and the booking form render
+  visible in the prerendered HTML and stay that way. A page that fades in is a
+  page that is invisible for the slowest second of the visit, and that second is
+  when a search engine takes its snapshot.
+- **Reveal-on-scroll** (`src/components/motion.tsx`) is for sections below the
+  fold, on desktop only, and only after hydration. On phones and in the
+  prerendered HTML it renders a plain element.
+- No scrolling ticker, no crawling caution tape. `.hazard-stripes` is a solid
+  yellow rule.
 - Hero image `kenburns` drift and button `sheen` remain; both respect
   `prefers-reduced-motion` via `MotionConfig reducedMotion="user"`.
 
@@ -209,29 +207,32 @@ Motion is decoration; nobody stranded is enjoying it.
 
 ## 6. Voice
 
-Warm, plain, British. We are the mate who turns up.
+Warm, plain, British. We are the people who turn up.
 
 - **Do:** "We'll come and get you." / "Stuck? We've got you." / "Tell us where
   you are and someone from our Manchester team will be on their way."
-- **Don't:** shout reassurance in all caps. "DON'T STAY STRANDED." was the old
-  line and it reads as a threat.
+- **Don't:** shout reassurance in all caps. "DON'T STAY STRANDED." reads as a
+  threat.
 - **UK English throughout.** Tyre, not tire. Kerb, not curb.
 - **No em dashes** in customer-facing copy. Use a full stop or a comma.
-- **Numbers must survive arithmetic.** Rescues-per-day divided by drivers has to
-  land on a believable figure — a reader who catches one inflated number stops
-  believing the response time too. `src/metrics.tsx` and `backend/seed.py` carry
-  matching notes.
-- **Price before commitment.** The "From £40" line is derived from `FROM_PRICE`
-  in `src/pricing.ts` so it can never drift from the real tariff.
+  `src/services.test.ts` enforces this for the service pages.
+- **Numbers must be real.** The dispatch panel counts real bookings and real
+  drivers on duty, and quotes the measured response time once enough jobs have
+  been timed (`backend/app/main.py`). A reader who catches one invented number
+  stops believing the response time too.
+- **Price before commitment.** The "From £55" line is derived from `FROM_PRICE`
+  in `src/pricing.ts` so it can never drift from the real tariff, and the prices
+  page shows the whole tariff.
 
 ---
 
 ## 7. Outstanding before launch
 
-Not design, but the biggest trust gaps on the page:
-
-- The `.co.uk` domain and the `info@` address are still placeholders. Real ones
-  go in `src/config.ts` plus the JSON-LD in `index.html`. (The phone number is
-  live: `07442 384141`.)
+- Register **carrecoverynearme.uk** (and ideally the `.co.uk` if it ever
+  frees up) and point Cloudflare Pages at it. `SITE_URL` in `src/config.ts`,
+  `index.html`, `public/robots.txt` and the backend's `SITE_URL` already say it.
+- The `hello@carrecoverynearme.uk` address needs a mailbox.
 - No company number, trading address, insurer or accreditation is shown.
   "Fully insured" as plain text costs nothing to write, and readers know it.
+- The testimonials are labelled illustrative. Real ratings now arrive through
+  the tracking page; once there are a few dozen, show the real average instead.

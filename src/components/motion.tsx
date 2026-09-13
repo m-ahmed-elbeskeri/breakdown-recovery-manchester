@@ -4,18 +4,17 @@ import { animate, motion, useInView, useMotionValue } from 'motion/react';
 
 const SMALL_SCREEN = '(max-width: 639px)';
 
-const matchesSmallScreen = (): boolean =>
-  typeof window !== 'undefined' &&
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia(SMALL_SCREEN).matches;
-
 /**
  * True on phone-sized viewports, where reveal-on-scroll is skipped entirely.
  * Flicking quickly down a phone screen outruns the 0.55s fade, so sections
  * land blank — which reads as a broken page to someone stranded and stressed.
+ *
+ * Starts false everywhere, including on a phone, and corrects itself after
+ * mount. The first client render has to match the server-rendered HTML
+ * exactly or React throws the prerendered page away and starts again.
  */
 function useSmallScreen(): boolean {
-  const [isSmall, setIsSmall] = useState(matchesSmallScreen);
+  const [isSmall, setIsSmall] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -29,11 +28,21 @@ function useSmallScreen(): boolean {
   return isSmall;
 }
 
+/** False during server rendering and hydration, true once the page is live. */
+function useHydrated(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  return ready;
+}
+
 /**
  * Fades + lifts its children into view once, the first time they're scrolled to.
  * The lift is a transform, so `MotionConfig reducedMotion="user"` automatically
  * drops it (keeping just the fade) for visitors who prefer reduced motion.
- * On phones the content is rendered outright — see `useSmallScreen`.
+ *
+ * Rendered as a plain element on phones and in the prerendered HTML: the page
+ * search engines and slow connections see must have every section visible,
+ * not sat at opacity 0 waiting for a script.
  */
 export function Reveal({
   children,
@@ -47,8 +56,9 @@ export function Reveal({
   y?: number;
 }) {
   const isSmall = useSmallScreen();
+  const hydrated = useHydrated();
 
-  if (isSmall) return <div className={className}>{children}</div>;
+  if (isSmall || !hydrated) return <div className={className}>{children}</div>;
 
   return (
     <motion.div
@@ -83,7 +93,7 @@ export function CountUp({ value, className }: { value: number; className?: strin
 
   return (
     <span ref={ref} className={className}>
-      0
+      {value}
     </span>
   );
 }

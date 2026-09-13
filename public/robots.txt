@@ -1,21 +1,12 @@
-# 24/7 Breakdown Recovery Manchester
-# https://breakdown-recovery-manchester.co.uk
+# Car Recovery Near Me — 24/7 breakdown recovery, Greater Manchester
+# https://carrecoverynearme.uk
 
 User-agent: *
 Allow: /
+# Private pages: nothing here is worth indexing and /track pages carry a
+# customer's booking.
+Disallow: /admin
+Disallow: /driver
+Disallow: /track/
 
-# Allow all major search and AI crawlers
-User-agent: Googlebot
-Allow: /
-
-User-agent: Googlebot-Image
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
-
-# Sitemap
-Sitemap: https://breakdown-recovery-manchester.co.uk/sitemap.xml
+Sitemap: https://carrecoverynearme.uk/sitemap.xml

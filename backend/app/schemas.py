@@ -6,6 +6,8 @@ from .phone import normalise_phone
 
 # Field names are camelCase to match the browser client's JSON exactly.
 
+BookingStatus = Literal["pending", "accepted", "en_route", "on_scene", "complete", "cancelled"]
+
 
 class BookingCreate(BaseModel):
     requestId: str = Field(min_length=1, max_length=64)
@@ -16,6 +18,8 @@ class BookingCreate(BaseModel):
     service: str = Field(min_length=1, max_length=40)
     timing: Literal["now", "later"]
     scheduledFor: Optional[str] = None
+    # Registration or "silver Ford Focus" — whatever helps the driver spot it.
+    vehicle: Optional[str] = Field(default=None, max_length=80)
     pickupLat: Optional[float] = Field(default=None, ge=-90, le=90)
     pickupLng: Optional[float] = Field(default=None, ge=-180, le=180)
     motorway: bool = False
@@ -28,6 +32,12 @@ class BookingCreate(BaseModel):
     def _phone_can_be_rung(cls, value: str) -> str:
         return normalise_phone(value)
 
+    @field_validator("vehicle")
+    @classmethod
+    def _blank_vehicle_is_none(cls, value: Optional[str]) -> Optional[str]:
+        cleaned = (value or "").strip()
+        return cleaned or None
+
 
 class BookingCreated(BaseModel):
     bookingId: int
@@ -36,12 +46,17 @@ class BookingCreated(BaseModel):
     # average. The confirmation screen states an arrival time as fact, and it
     # has no business doing that on the strength of an average.
     etaSource: Literal["driver", "fallback"] = "fallback"
+    # The customer's key to their live tracking page. Shown once, on the
+    # confirmation screen; the operator can also read it from the admin list.
+    trackToken: Optional[str] = None
 
 
 class MetricsOut(BaseModel):
     rescuesToday: int
     driversAvailable: int
     avgResponseMinutes: int
+    # True once avgResponseMinutes is measured from real jobs rather than seeded.
+    measured: bool = False
 
 
 class BookingOut(BaseModel):
@@ -53,6 +68,7 @@ class BookingOut(BaseModel):
     service: str
     timing: str
     scheduledFor: Optional[str]
+    vehicle: Optional[str]
     pickupLat: Optional[float]
     pickupLng: Optional[float]
     motorway: bool
@@ -60,13 +76,22 @@ class BookingOut(BaseModel):
     durationMinutes: Optional[int]
     price: Optional[int]
     driverId: Optional[int]
+    driverName: Optional[str]
     status: str
+    trackToken: Optional[str]
     createdAt: str
+    acceptedAt: Optional[str]
+    enRouteAt: Optional[str]
+    onSceneAt: Optional[str]
+    finishedAt: Optional[str]
+    cancelledBy: Optional[str]
+    rating: Optional[int]
+    ratingComment: Optional[str]
 
 
 # -- Drivers -----------------------------------------------------------------
-# Coordinates appear only on DriverOut, which is admin-only. The public ETA
-# endpoint returns minutes and nothing that could locate a person.
+# Coordinates appear on DriverOut (admin-only) and, for the assigned driver
+# only while they are on the way, on the customer's own tracking page.
 
 
 class DriverCreate(BaseModel):
@@ -99,7 +124,7 @@ class DriverOut(BaseModel):
 
 
 class BookingStatusIn(BaseModel):
-    status: Literal["pending", "accepted", "en_route", "on_scene", "complete", "cancelled"]
+    status: BookingStatus
     driverId: Optional[int] = None
 
 
@@ -110,6 +135,52 @@ class EtaOut(BaseModel):
     etaMinutes: Optional[int]
     queueMinutes: int
     source: Literal["driver", "fallback"]
+
+
+# ── Customer tracking ───────────────────────────────────────────────────────
+# Reached with the booking's own unguessable token. Returns the customer's
+# booking and, once a driver is assigned, who is coming; the driver's live
+# position is included only while they are actually on the way.
+
+
+class TrackDriver(BaseModel):
+    name: str
+    phone: Optional[str]
+    lat: Optional[float]
+    lng: Optional[float]
+    locatedAt: Optional[str]
+
+
+class TrackOut(BaseModel):
+    id: int
+    status: BookingStatus
+    service: str
+    timing: str
+    scheduledFor: Optional[str]
+    location: str
+    destination: Optional[str]
+    vehicle: Optional[str]
+    pickupLat: Optional[float]
+    pickupLng: Optional[float]
+    price: Optional[int]
+    motorway: bool
+    etaMinutes: Optional[int]
+    etaSource: Literal["driver", "fallback"]
+    driversOnDuty: int
+    driver: Optional[TrackDriver]
+    createdAt: str
+    acceptedAt: Optional[str]
+    enRouteAt: Optional[str]
+    onSceneAt: Optional[str]
+    finishedAt: Optional[str]
+    cancelledBy: Optional[str]
+    rating: Optional[int]
+    canCancel: bool
+
+
+class RatingIn(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: Optional[str] = Field(default=None, max_length=500)
 
 
 # ── Telemetry ───────────────────────────────────────────────────────────────
