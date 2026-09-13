@@ -1,6 +1,8 @@
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from .phone import normalise_phone
 
 # Field names are camelCase to match the browser client's JSON exactly.
 
@@ -20,6 +22,11 @@ class BookingCreate(BaseModel):
     distanceMiles: Optional[float] = None
     durationMinutes: Optional[int] = None
     price: Optional[int] = None
+
+    @field_validator("phone")
+    @classmethod
+    def _phone_can_be_rung(cls, value: str) -> str:
+        return normalise_phone(value)
 
 
 class BookingCreated(BaseModel):

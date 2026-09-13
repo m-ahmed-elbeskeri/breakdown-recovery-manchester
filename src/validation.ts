@@ -2,6 +2,7 @@
 // "Continue" gate and the final submit so the two can never disagree.
 
 import { serviceNeedsDestination } from './data';
+import { checkPhone } from './phone';
 
 export interface QuoteData {
   location: string;
@@ -26,9 +27,8 @@ export type QuotePhase = 'contact' | 'full';
 export function validateQuote(data: QuoteData, phase: QuotePhase): string | null {
   if (!data.location.trim()) return 'Please enter a pickup location.';
 
-  if (data.phone.replace(/\D/g, '').length < 7) {
-    return 'Please enter a valid phone number.';
-  }
+  const phone = checkPhone(data.phone);
+  if (!phone.ok) return phone.error;
 
   if (data.timing === 'later') {
     if (!data.scheduledFor) return 'Please pick a date and time for your booking.';

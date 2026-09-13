@@ -19,12 +19,16 @@ describe('validateQuote — contact phase', () => {
     expect(validateQuote({ ...base, location: '   ' }, 'contact')).toMatch(/pickup location/i);
   });
 
-  it('rejects a phone number with fewer than 7 digits', () => {
+  it('rejects a phone number that is too short to ring', () => {
     expect(validateQuote({ ...base, phone: '12345' }, 'contact')).toMatch(/valid phone/i);
   });
 
-  it('ignores non-digits when counting phone length', () => {
-    expect(validateQuote({ ...base, phone: '(0161) 000-0000' }, 'contact')).toBeNull();
+  it('rejects seven digits that are not a real UK number', () => {
+    expect(validateQuote({ ...base, phone: '1234567' }, 'contact')).toMatch(/valid phone/i);
+  });
+
+  it('accepts a landline written with brackets and dashes', () => {
+    expect(validateQuote({ ...base, phone: '(0161) 496-0000' }, 'contact')).toBeNull();
   });
 
   it('does not require a service in the contact phase', () => {

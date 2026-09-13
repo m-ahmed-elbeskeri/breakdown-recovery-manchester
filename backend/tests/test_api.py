@@ -54,6 +54,20 @@ def test_create_booking_validates_payload(client):
     assert res.status_code == 422
 
 
+def test_booking_rejects_a_number_nobody_can_ring(client):
+    for phone in ("1234567", "09001234567", "not a number"):
+        res = client.post("/api/bookings", json=booking_payload(requestId=f"bad-{phone}", phone=phone))
+        assert res.status_code == 422, phone
+
+
+def test_booking_stores_the_phone_in_one_tidy_shape(client):
+    from app.config import settings
+
+    client.post("/api/bookings", json=booking_payload(phone="+44 (0)7700-900-123"))
+    rows = client.get("/api/bookings", headers={"x-api-key": settings.admin_api_key}).json()
+    assert rows[0]["phone"] == "07700 900123"
+
+
 def test_admin_list_requires_api_key(client):
     from app.config import settings
 

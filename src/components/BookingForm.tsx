@@ -34,6 +34,7 @@ import {
 import { PlaceInput } from './PlaceInput';
 import { fetchEta, type EtaQuote } from '../eta';
 import { track } from '../telemetry';
+import { formatPhone } from '../phone';
 import {
   estimatePrice,
   isNightHour,
@@ -410,7 +411,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
         pickupLat: pin?.lat,
         pickupLng: pin?.lng,
         destination: quoteData.destination.trim() || undefined,
-        phone: quoteData.phone.trim(),
+        // One consistent shape, so the operator reads "07700 900123" whether
+        // the customer typed +447700900123 or 07700-900-123.
+        phone: formatPhone(quoteData.phone),
         service: quoteData.service,
         timing: quoteData.timing,
         scheduledFor:
@@ -597,6 +600,9 @@ export function BookingForm({ regionName }: { regionName: string }) {
                     className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
                     value={quoteData.phone}
                     onChange={(e) => setQuoteData({ ...quoteData, phone: e.target.value })}
+                    // Tidy on the way out, so the customer sees the number read
+                    // back the way it will be rung — and can spot a typo in it.
+                    onBlur={() => setQuoteData((prev) => ({ ...prev, phone: formatPhone(prev.phone) }))}
                     aria-label="Your phone number"
                   />
                 </div>
