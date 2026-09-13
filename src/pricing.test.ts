@@ -35,15 +35,15 @@ describe('estimatePrice — tow jobs', () => {
   });
 
   it('charges callout + per-mile, rounded to a clean figure', () => {
-    // 10 miles: 45 + 10*2.9 = 74 → rounds to 75
+    // 10 miles: 80 + 10*2.25 = 102.50 → rounds to 105
     expect(estimatePrice({ service: 'towing', distanceMiles: 10 })).toBe(
       Math.round((CALLOUT_FEE + 10 * PER_MILE) / 5) * 5,
     );
   });
 
   it('drops to the long-distance rate beyond the first 30 miles', () => {
-    // £45 + 30 × £2.90 + 134.8 × £1.55 = £340.94 → £340
-    expect(estimatePrice({ service: 'towing', distanceMiles: 164.8 })).toBe(340);
+    // £80 + 30 × £2.25 + 134.8 × £1.60 = £363.18 → £365
+    expect(estimatePrice({ service: 'towing', distanceMiles: 164.8 })).toBe(365);
   });
 
   it('never charges a longer tow less than a shorter one', () => {
@@ -53,8 +53,8 @@ describe('estimatePrice — tow jobs', () => {
   });
 
   it('applies the night multiplier for out-of-hours jobs', () => {
-    const day = estimatePrice({ service: 'towing', distanceMiles: 10, night: false })!;
-    const night = estimatePrice({ service: 'towing', distanceMiles: 10, night: true })!;
+    const day = estimatePrice({ service: 'towing', distanceMiles: 20, night: false })!;
+    const night = estimatePrice({ service: 'towing', distanceMiles: 20, night: true })!;
     expect(night).toBeGreaterThan(day);
     expect(night / day).toBeCloseTo(NIGHT_MULTIPLIER, 1);
   });
@@ -72,8 +72,8 @@ describe('estimatePrice — empty running', () => {
   });
 
   it('adds empty running to a tow on top of the loaded miles', () => {
-    // £45 callout + 10 loaded × £2.90 = £74, plus 7 chargeable empty × £1.50 = £10.50 → £85.
-    expect(estimatePrice({ service: 'towing', distanceMiles: 10, deadheadMiles: 15 })).toBe(85);
+    // £80 callout + 10 loaded × £2.25 = £102.50, plus 7 chargeable empty × £1.50 = £10.50 → £115.
+    expect(estimatePrice({ service: 'towing', distanceMiles: 10, deadheadMiles: 15 })).toBe(115);
   });
 
   it('prices a short tow far from base above a short tow next door', () => {
