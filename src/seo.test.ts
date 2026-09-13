@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { regionSeo, serviceSeo, pricingSeo, seoForPath, jsonLdText, absoluteUrl } from './seo';
+import {
+  regionSeo,
+  serviceSeo,
+  pricingSeo,
+  recruitSeo,
+  seoForPath,
+  jsonLdText,
+  absoluteUrl,
+} from './seo';
 import { BRAND_NAME, SITE_URL, HOME_REGION } from './config';
 import { SERVICE_PAGES } from './services';
 
@@ -60,8 +68,20 @@ describe('pricingSeo', () => {
   });
 });
 
+describe('recruitSeo', () => {
+  it('is the driver recruitment page with its FAQ and breadcrumbs', () => {
+    const seo = recruitSeo();
+    expect(seo.path).toBe('/drive-with-us');
+    expect(seo.title.length).toBeLessThanOrEqual(65);
+    expect(seo.description.length).toBeLessThanOrEqual(220);
+    expect(types(seo)).toContain('FAQPage');
+    expect(types(seo)).toContain('BreadcrumbList');
+  });
+});
+
 describe('seoForPath', () => {
   it('answers for every public page', () => {
+    expect(seoForPath('/drive-with-us')?.path).toBe('/drive-with-us');
     expect(seoForPath('/')?.path).toBe('/');
     expect(seoForPath('/car-recovery-bolton')?.title).toContain('Bolton');
     expect(seoForPath('/tow-truck-near-me')?.path).toBe('/tow-truck-near-me');

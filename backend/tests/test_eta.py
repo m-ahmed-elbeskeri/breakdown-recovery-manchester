@@ -1,11 +1,8 @@
-"""The live-ETA path, and the two endpoints that depend on it.
+"""The live-ETA path, and the endpoints that depend on it.
 
 Written after /api/eta and POST /api/bookings both returned 500 in production
-for want of a constant that was never defined. Nothing caught it: the browser
-treats a failed ETA lookup as "no answer" and quietly falls back to the
-published average, which is right for a stranded customer and hopeless for
-noticing the endpoint is dead. So these tests call both endpoints for real and
-assert on the status code, not just the shape of a happy answer.
+for want of a constant that was never defined. These tests call both endpoints
+for real and assert on the status code, not just the shape of a happy answer.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -18,30 +15,23 @@ from app.eta import POSITION_MAX_AGE_MINUTES, position_is_fresh
 
 
 @pytest.fixture
-def add_driver(session_factory):
-    def _add(available=True, lat=53.4839, lng=-2.3078, age_minutes=0, busy_minutes=0):
-        with session_factory() as db:
-            driver = models.Driver(
-                name="Test Driver",
-                available=available,
-                active=True,
-                lat=lat,
-                lng=lng,
-                located_at=datetime.now(timezone.utc) - timedelta(minutes=age_minutes),
-                busy_until=(
-                    datetime.now(timezone.utc) + timedelta(minutes=busy_minutes)
-                    if busy_minutes
-                    else None
-                ),
-            )
-            db.add(driver)
-            db.commit()
-            return driver.id
+def add_driver(compliant_driver, session_factory):
+    def _add(available=True, lat=53.4839, lng=-2.3078, age_minutes=0, busy_minutes=0, **fields):
+        driver_id = compliant_driver(
+            available=available,
+            lat=lat,
+            lng=lng,
+            located_at=datetime.now(timezone.utc) - timedelta(minutes=age_minutes),
+            busy_until=(
+                datetime.now(timezone.utc) + timedelta(minutes=busy_minutes)
+                if busy_minutes
+                else None
+            ),
+            **fields,
+        )
+        return driver_id
 
     return _add
-
-
-ADMIN = {"x-api-key": settings.admin_api_key}
 
 
 def booking_payload(**overrides):
@@ -75,7 +65,6 @@ def test_eta_endpoint_does_not_error_with_a_driver_on_duty(client, add_driver):
 
 
 def test_booking_survives_the_eta_path(client, add_driver):
-    """create_booking asks for a live ETA too — it must not take bookings down."""
     add_driver()
     res = client.post("/api/bookings", json=booking_payload())
     assert res.status_code == 201, res.text
@@ -92,8 +81,15 @@ def test_off_duty_drivers_are_not_counted(client, add_driver):
     assert body["source"] == "fallback"
 
 
+def test_drivers_not_yet_approved_are_never_quoted(client, add_driver):
+    """An applicant who somehow shows as available must not be counted or measured."""
+    add_driver(application_status="submitted")
+    body = client.get("/api/eta", params={"lat": 53.4772, "lng": -2.2309}).json()
+    assert body["driversOnDuty"] == 0
+    assert body["source"] == "fallback"
+
+
 def test_a_stale_position_is_treated_as_no_position(client, add_driver):
-    # On duty, but the phone stopped reporting a while ago.
     add_driver(age_minutes=POSITION_MAX_AGE_MINUTES + 5)
     body = client.get("/api/eta", params={"lat": 53.4772, "lng": -2.2309}).json()
     assert body["driversOnDuty"] == 1, "still on duty"
@@ -107,32 +103,26 @@ def test_a_driver_with_no_position_is_skipped(client, add_driver):
 
 
 def test_eta_never_returns_coordinates(client, add_driver):
-    """The public endpoint must not disclose where anybody is."""
+    import json
+
     add_driver()
     body = client.get("/api/eta", params={"lat": 53.4772, "lng": -2.2309}).json()
     assert set(body) == {"driversOnDuty", "etaMinutes", "queueMinutes", "source"}
-    assert "53.48" not in res_text(body)
-
-
-def res_text(body) -> str:
-    import json
-
-    return json.dumps(body)
+    assert "53.48" not in json.dumps(body)
 
 
 # ── position_is_fresh ───────────────────────────────────────────────────────
 
 
 def test_position_freshness_boundaries():
-    now = datetime.now(timezone.utc)
-    assert position_is_fresh(now) is True
-    assert position_is_fresh(now - timedelta(minutes=POSITION_MAX_AGE_MINUTES - 1)) is True
-    assert position_is_fresh(now - timedelta(minutes=POSITION_MAX_AGE_MINUTES + 1)) is False
+    moment = datetime.now(timezone.utc)
+    assert position_is_fresh(moment) is True
+    assert position_is_fresh(moment - timedelta(minutes=POSITION_MAX_AGE_MINUTES - 1)) is True
+    assert position_is_fresh(moment - timedelta(minutes=POSITION_MAX_AGE_MINUTES + 1)) is False
     assert position_is_fresh(None) is False
 
 
 def test_position_freshness_handles_naive_timestamps():
-    """SQLite hands back naive datetimes; they must not raise."""
     naive = datetime.now(timezone.utc).replace(tzinfo=None)
     assert position_is_fresh(naive) is True
 
@@ -140,53 +130,45 @@ def test_position_freshness_handles_naive_timestamps():
 # ── Deleting a job ──────────────────────────────────────────────────────────
 
 
-def test_delete_removes_the_job(client, add_driver):
+def test_delete_removes_the_job(client, add_driver, admin_headers):
     add_driver()
     created = client.post("/api/bookings", json=booking_payload(requestId="del-1")).json()
-    res = client.delete(
-        f"/api/bookings/{created['bookingId']}", headers=ADMIN
-    )
+    res = client.delete(f"/api/bookings/{created['bookingId']}", headers=admin_headers)
     assert res.status_code == 204
-    remaining = client.get("/api/bookings", headers=ADMIN).json()
+    remaining = client.get("/api/bookings", headers=admin_headers).json()
     assert all(b["id"] != created["bookingId"] for b in remaining)
 
 
-def test_delete_needs_the_key(client, add_driver):
+def test_delete_needs_an_admin(client, add_driver):
     add_driver()
     created = client.post("/api/bookings", json=booking_payload(requestId="del-2")).json()
     assert client.delete(f"/api/bookings/{created['bookingId']}").status_code == 401
 
 
-def test_delete_frees_the_truck(client, add_driver):
-    """Deleting the job you were driving to must not leave you marked busy."""
+def test_delete_frees_the_truck(client, add_driver, admin_headers):
     driver_id = add_driver()
     created = client.post("/api/bookings", json=booking_payload(requestId="del-3")).json()
     job_id = created["bookingId"]
-    client.post(
+    res = client.post(
         f"/api/bookings/{job_id}/status",
         json={"status": "en_route", "driverId": driver_id},
-        headers=ADMIN,
+        headers=admin_headers,
     )
-    before = client.get("/api/drivers", headers=ADMIN).json()[0]
+    assert res.status_code == 200, res.text
+    before = client.get("/api/drivers", headers=admin_headers).json()[0]
     assert before["currentBookingId"] == job_id
 
-    client.delete(f"/api/bookings/{job_id}", headers=ADMIN)
-    after = client.get("/api/drivers", headers=ADMIN).json()[0]
+    client.delete(f"/api/bookings/{job_id}", headers=admin_headers)
+    after = client.get("/api/drivers", headers=admin_headers).json()[0]
     assert after["currentBookingId"] is None
     assert after["busyUntil"] is None
 
 
-def test_delete_unknown_job_is_404(client):
-    assert (
-        client.delete("/api/bookings/99999", headers=ADMIN).status_code
-        == 404
-    )
+def test_delete_unknown_job_is_404(client, admin_headers):
+    assert client.delete("/api/bookings/99999", headers=admin_headers).status_code == 404
 
 
 # ── CORS ────────────────────────────────────────────────────────────────────
-# The delete endpoint worked perfectly from curl and failed in the browser,
-# because allow_methods did not list DELETE and the preflight was refused.
-# curl ignores CORS; browsers do not. So assert on the preflight itself.
 
 
 def _preflight(client, method: str):
@@ -196,13 +178,12 @@ def _preflight(client, method: str):
         headers={
             "Origin": origin,
             "Access-Control-Request-Method": method,
-            "Access-Control-Request-Headers": "x-api-key",
+            "Access-Control-Request-Headers": "authorization",
         },
     )
 
 
 def test_browser_may_delete_a_job():
-    """A method the console calls must survive the preflight, not just curl."""
     from fastapi.testclient import TestClient
 
     from app.main import app
@@ -213,7 +194,7 @@ def test_browser_may_delete_a_job():
     assert "DELETE" in res.headers.get("access-control-allow-methods", "")
 
 
-def test_browser_may_post_and_get():
+def test_browser_may_post_and_get_with_a_bearer_token():
     from fastapi.testclient import TestClient
 
     from app.main import app
@@ -227,41 +208,37 @@ def test_browser_may_post_and_get():
 # ── The driver correcting their own free-at time ────────────────────────────
 
 
-def test_driver_can_set_how_long_they_will_be(client, add_driver):
+def test_admin_can_set_how_long_a_driver_will_be(client, add_driver, admin_headers):
     driver_id = add_driver()
     res = client.post(
-        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 45}, headers=ADMIN
+        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 45}, headers=admin_headers
     )
     assert res.status_code == 200, res.text
     assert 43 <= res.json()["busyMinutes"] <= 45
 
 
-def test_driver_can_declare_themselves_free(client, add_driver):
+def test_driver_can_declare_themselves_free(client, add_driver, admin_headers):
     driver_id = add_driver(busy_minutes=60)
     res = client.post(
-        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 0}, headers=ADMIN
+        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 0}, headers=admin_headers
     )
     assert res.json()["busyMinutes"] == 0
     assert res.json()["busyUntil"] is None
 
 
-def test_an_edited_free_time_reaches_the_customer_quote(client, add_driver):
-    """The whole point: a longer job means everyone behind it waits longer."""
+def test_an_edited_free_time_reaches_the_customer_quote(client, add_driver, admin_headers):
     driver_id = add_driver()
     before = client.get("/api/eta", params={"lat": 53.4772, "lng": -2.2309}).json()
-
-    client.post(f"/api/drivers/{driver_id}/state", json={"busyMinutes": 90}, headers=ADMIN)
+    client.post(f"/api/drivers/{driver_id}/state", json={"busyMinutes": 90}, headers=admin_headers)
     after = client.get("/api/eta", params={"lat": 53.4772, "lng": -2.2309}).json()
-
     assert after["queueMinutes"] >= 88
     assert after["etaMinutes"] > before["etaMinutes"]
 
 
-def test_busy_minutes_is_capped(client, add_driver):
-    """A mistyped number must not take a truck out of dispatch for a week."""
+def test_busy_minutes_is_capped(client, add_driver, admin_headers):
     driver_id = add_driver()
     res = client.post(
-        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 100000}, headers=ADMIN
+        f"/api/drivers/{driver_id}/state", json={"busyMinutes": 100000}, headers=admin_headers
     )
     assert res.status_code == 422
 
@@ -276,7 +253,6 @@ def test_booking_reports_a_measured_eta_as_such(client, add_driver):
 
 
 def test_booking_reports_a_fallback_when_nobody_is_on_duty(client):
-    """No driver means no dispatch — the screen must not claim one."""
     body = client.post("/api/bookings", json=booking_payload(requestId="src-2")).json()
     assert body["etaSource"] == "fallback"
 
@@ -294,3 +270,7 @@ def test_booking_without_coordinates_falls_back(client, add_driver):
         json=booking_payload(requestId="src-4", pickupLat=None, pickupLng=None),
     ).json()
     assert body["etaSource"] == "fallback"
+
+
+def test_models_import_cleanly():
+    assert models.Driver.__tablename__ == "drivers"

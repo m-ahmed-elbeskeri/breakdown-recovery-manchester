@@ -1,10 +1,10 @@
-// Driver-console API calls. Everything here is authenticated with the operator
-// key and returns data the public site never sees — including other people's
-// live coordinates, which is why none of it goes through `api.ts`.
+// The driver's side of the API: their application, their documents and their
+// jobs. Every call carries the driver's own session, and the API only ever
+// answers about that driver.
 
-import { API_BASE } from './api';
-
-export const DRIVER_KEY_STORAGE = 'driver_api_key';
+import { apiBlob, apiFetch, apiUpload } from './apiClient';
+import type { Session } from './auth';
+import type { DocumentInfo, DriverProfile, ProfilePatch } from './driverDocs';
 
 export interface Driver {
   id: number;
@@ -24,7 +24,8 @@ export interface Job {
   region: string;
   location: string;
   destination: string | null;
-  phone: string;
+  /** Null on a job that is not yours yet. */
+  phone: string | null;
   service: string;
   timing: string;
   scheduledFor: string | null;
@@ -38,13 +39,14 @@ export interface Job {
   driverId: number | null;
   driverName: string | null;
   status: JobStatus;
+  /** Admins only. */
   trackToken: string | null;
   createdAt: string;
   acceptedAt: string | null;
   enRouteAt: string | null;
   onSceneAt: string | null;
   finishedAt: string | null;
-  cancelledBy: 'customer' | 'driver' | null;
+  cancelledBy: 'customer' | 'driver' | 'office' | null;
   rating: number | null;
   ratingComment: string | null;
 }
@@ -59,70 +61,71 @@ export const NEXT_STATUS: Partial<Record<JobStatus, { next: JobStatus; label: st
   on_scene: { next: 'complete', label: 'Job done' },
 };
 
-async function call<T>(path: string, key: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { 'x-api-key': key, 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return (await res.json()) as T;
+// ── Applying and paperwork ──────────────────────────────────────────────────
+
+export interface ApplyBody {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  consent: boolean;
 }
 
-export const fetchDrivers = (key: string) => call<Driver[]>('/api/drivers', key);
+export const applyToDrive = (body: ApplyBody) =>
+  apiFetch<Session>('/api/drivers/apply', { method: 'POST', json: body });
 
-export const fetchJobs = (key: string) => call<Job[]>('/api/bookings?limit=100', key);
+export const fetchMyProfile = () => apiFetch<DriverProfile>('/api/me/driver');
 
-export const createDriver = (key: string, name: string, phone: string) =>
-  call<Driver>('/api/drivers', key, {
-    method: 'POST',
-    body: JSON.stringify({ name, phone: phone.trim() || null }),
-  });
+export const saveMyProfile = (patch: ProfilePatch) =>
+  apiFetch<DriverProfile>('/api/me/driver/profile', { method: 'POST', json: patch });
 
-export const retireDriver = (key: string, driverId: number) =>
-  fetch(`${API_BASE}/api/drivers/${driverId}`, {
-    method: 'DELETE',
-    headers: { 'x-api-key': key },
-  }).then((res) => {
-    if (!res.ok) throw new Error(`${res.status}`);
-  });
+export const submitMyApplication = () =>
+  apiFetch<DriverProfile>('/api/me/driver/submit', { method: 'POST' });
 
-export const setAvailability = (key: string, driverId: number, available: boolean) =>
-  call<Driver>(`/api/drivers/${driverId}/state`, key, {
-    method: 'POST',
-    body: JSON.stringify({ available }),
-  });
+export interface UploadMeta {
+  docDate?: string | null;
+  reference?: string | null;
+  fileName?: string | null;
+}
 
-export const sendPosition = (key: string, driverId: number, lat: number, lng: number) =>
-  call<Driver>(`/api/drivers/${driverId}/state`, key, {
-    method: 'POST',
-    body: JSON.stringify({ lat, lng }),
-  });
+export const uploadMyDocument = (
+  docType: string,
+  file: Blob,
+  meta: UploadMeta,
+  onProgress?: (fraction: number) => void,
+) =>
+  apiUpload<DocumentInfo>(
+    '/api/me/documents',
+    file,
+    { docType, docDate: meta.docDate, reference: meta.reference, fileName: meta.fileName },
+    onProgress,
+  );
 
-/** Tell dispatch how much longer this driver expects to be. 0 clears it. */
-export const setBusyMinutes = (key: string, driverId: number, busyMinutes: number) =>
-  call<Driver>(`/api/drivers/${driverId}/state`, key, {
-    method: 'POST',
-    body: JSON.stringify({ busyMinutes }),
-  });
+export const deleteMyDocument = (id: number) =>
+  apiFetch<void>(`/api/me/documents/${id}`, { method: 'DELETE' });
 
-export const setJobStatus = (key: string, jobId: number, status: JobStatus, driverId?: number) =>
-  call<Job>(`/api/bookings/${jobId}/status`, key, {
-    method: 'POST',
-    body: JSON.stringify({ status, driverId }),
-  });
+export const myDocumentFile = (id: number) => apiBlob(`/api/me/documents/${id}/file`);
 
-export const deleteJob = (key: string, jobId: number) =>
-  fetch(`${API_BASE}/api/bookings/${jobId}`, {
-    method: 'DELETE',
-    headers: { 'x-api-key': key },
-  }).then((res) => {
-    if (!res.ok) throw new Error(`${res.status}`);
-  });
+// ── Working ─────────────────────────────────────────────────────────────────
+
+export const fetchMyJobs = () => apiFetch<Job[]>('/api/me/jobs');
+
+export interface StatePatch {
+  available?: boolean;
+  lat?: number;
+  lng?: number;
+  busyMinutes?: number;
+}
+
+export const setMyState = (patch: StatePatch) =>
+  apiFetch<Driver>('/api/me/state', { method: 'POST', json: patch });
+
+export const setMyJobStatus = (jobId: number, status: Exclude<JobStatus, 'cancelled'>) =>
+  apiFetch<Job>(`/api/me/jobs/${jobId}/status`, { method: 'POST', json: { status } });
 
 /**
  * How each status looks. Colour carries the state so a driver scanning the
- * list sees what needs doing without reading a word: live work in hi-vis
- * yellow, finished work green and receded, anything cancelled greyed out.
+ * list sees what needs doing without reading a word.
  */
 export const STATUS_STYLE: Record<JobStatus, { label: string; border: string; chip: string }> = {
   pending: {
@@ -208,7 +211,7 @@ export function diffJobs(
     const was = before.get(j.id);
     return (
       j.status === 'cancelled' &&
-      j.cancelledBy === 'customer' &&
+      j.cancelledBy !== 'driver' &&
       was !== undefined &&
       was.status !== 'cancelled' &&
       was.driverId === meId &&

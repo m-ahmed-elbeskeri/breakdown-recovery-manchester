@@ -10,9 +10,11 @@ export type PageMatch =
   | { kind: 'region'; region: Region; legacy: boolean }
   | { kind: 'service'; page: ServicePage }
   | { kind: 'pricing' }
-  | { kind: 'privacy' };
+  | { kind: 'privacy' }
+  | { kind: 'recruit' };
 
 const PRICING_PATH = '/pricing';
+const RECRUIT_PATH = '/drive-with-us';
 
 /** Classify a pathname, or `null` for anything that should be a 404. */
 export function matchPage(pathname: string): PageMatch | null {
@@ -20,6 +22,7 @@ export function matchPage(pathname: string): PageMatch | null {
   if (path === '/') return { kind: 'region', region: HOME_REGION, legacy: false };
   if (path === PRICING_PATH) return { kind: 'pricing' };
   if (path === '/privacy') return { kind: 'privacy' };
+  if (path === RECRUIT_PATH) return { kind: 'recruit' };
 
   const slug = path.slice(1);
   if (slug.includes('/')) return null;
@@ -40,7 +43,8 @@ export function prerenderPaths(): string[] {
     PRICING_PATH,
     ...SERVICE_PAGES.map(servicePath),
     ...REGIONS.filter((r) => r !== HOME_REGION).map(regionPath),
+    RECRUIT_PATH,
   ];
 }
 
-export { PRICING_PATH };
+export { PRICING_PATH, RECRUIT_PATH };

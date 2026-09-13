@@ -30,14 +30,17 @@ describe('matchPage', () => {
     if (match?.kind === 'service') expect(match.page.service).toBe('jumpstart');
   });
 
-  it('knows the pricing and privacy pages', () => {
+  it('knows the pricing, privacy and driver recruitment pages', () => {
     expect(matchPage('/pricing')).toEqual({ kind: 'pricing' });
     expect(matchPage('/privacy')).toEqual({ kind: 'privacy' });
+    expect(matchPage('/drive-with-us')).toEqual({ kind: 'recruit' });
   });
 
   it('returns null for anything else', () => {
     expect(matchPage('/nope')).toBeNull();
     expect(matchPage('/track/abc')).toBeNull();
+    expect(matchPage('/drivers/apply')).toBeNull();
+    expect(matchPage('/driver/application')).toBeNull();
     expect(matchPage('/car-recovery-bolton/extra')).toBeNull();
   });
 });
@@ -48,6 +51,7 @@ describe('prerenderPaths', () => {
   it('includes the homepage, prices, every service page and every area page', () => {
     expect(paths[0]).toBe('/');
     expect(paths).toContain('/pricing');
+    expect(paths).toContain('/drive-with-us');
     for (const page of SERVICE_PAGES) expect(paths).toContain(servicePath(page));
     for (const region of REGIONS) {
       if (region !== HOME_REGION) expect(paths).toContain(regionPath(region));

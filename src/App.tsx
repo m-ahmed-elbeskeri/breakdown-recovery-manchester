@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { MotionConfig } from 'motion/react';
 import { HOME_REGION, regionPath } from './config';
@@ -7,10 +7,33 @@ import { RegionLanding } from './pages/LandingPage';
 import { ServicePage } from './pages/ServicePage';
 import { PricingPage } from './pages/PricingPage';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { DriveWithUsPage } from './pages/DriveWithUsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { AdminPage } from './pages/AdminPage';
-import { DriverPage } from './pages/DriverPage';
 import { TrackPage } from './pages/TrackPage';
+
+// The signed-in side of the site, loaded only by the people who use it. A
+// customer booking a tow never downloads the admin or the driver console.
+const AuthLayout = lazy(() =>
+  import('./pages/account/AuthLayout').then((m) => ({ default: m.AuthLayout })),
+);
+const LoginPage = lazy(() =>
+  import('./pages/account/LoginPage').then((m) => ({ default: m.LoginPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/account/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })),
+);
+const ResetPasswordPage = lazy(() =>
+  import('./pages/account/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+);
+const DriverApplyPage = lazy(() =>
+  import('./pages/driver/DriverApplyPage').then((m) => ({ default: m.DriverApplyPage })),
+);
+const DriverApp = lazy(() =>
+  import('./pages/driver/DriverApp').then((m) => ({ default: m.DriverApp })),
+);
+const AdminApp = lazy(() =>
+  import('./pages/admin/AdminApp').then((m) => ({ default: m.AdminApp })),
+);
 
 /** Any single-segment path: an area page, a service page, or a 404. */
 function SlugPage() {
@@ -32,6 +55,8 @@ function SlugPage() {
       return <PricingPage />;
     case 'privacy':
       return <PrivacyPolicy />;
+    case 'recruit':
+      return <DriveWithUsPage />;
   }
 }
 
@@ -55,9 +80,21 @@ export function AppRoutes() {
       <Route path="/" element={<RegionLanding regionName={HOME_REGION} />} />
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
-      <Route path="/admin" element={<AdminPage />} />
-      <Route path="/driver" element={<DriverPage />} />
       <Route path="/track/:token" element={<TrackPage />} />
+      <Route
+        element={
+          <Suspense fallback={<div className="min-h-screen bg-neutral-950" />}>
+            <AuthLayout />
+          </Suspense>
+        }
+      >
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/drivers/apply" element={<DriverApplyPage />} />
+        <Route path="/driver/*" element={<DriverApp />} />
+        <Route path="/admin/*" element={<AdminApp />} />
+      </Route>
       <Route path="/:slug" element={<SlugPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

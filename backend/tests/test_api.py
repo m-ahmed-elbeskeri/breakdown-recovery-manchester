@@ -31,7 +31,6 @@ def test_metrics_are_honest_when_nothing_has_happened(client):
 
 
 def test_metrics_seed_only_supplies_the_response_time(client, seed_metric):
-    """The seeded rescue and driver counts are ignored; only the average is a seed."""
     seed_metric(rescues=201, drivers=9, avg=20)
     body = client.get("/api/metrics").json()
     assert body["rescuesToday"] == 0
@@ -45,15 +44,13 @@ def test_create_booking_returns_id_and_eta(client, seed_metric):
     assert res.status_code == 201
     body = res.json()
     assert isinstance(body["bookingId"], int)
-    assert body["eta"] == 22  # from the seeded avg response time
+    assert body["eta"] == 22
 
 
 def test_booking_is_idempotent_on_request_id(client):
     first = client.post("/api/bookings", json=booking_payload(requestId="dup")).json()
     second = client.post("/api/bookings", json=booking_payload(requestId="dup")).json()
-
     assert first["bookingId"] == second["bookingId"]
-    # One booking exists despite two submits
     assert client.get("/api/metrics").json()["rescuesToday"] == 1
 
 
@@ -68,23 +65,26 @@ def test_booking_rejects_a_number_nobody_can_ring(client):
         assert res.status_code == 422, phone
 
 
-def test_booking_stores_the_phone_in_one_tidy_shape(client):
-    from app.config import settings
-
+def test_booking_stores_the_phone_in_one_tidy_shape(client, admin_headers):
     client.post("/api/bookings", json=booking_payload(phone="+44 (0)7700-900-123"))
-    rows = client.get("/api/bookings", headers={"x-api-key": settings.admin_api_key}).json()
+    rows = client.get("/api/bookings", headers=admin_headers).json()
     assert rows[0]["phone"] == "07700 900123"
 
 
-def test_admin_list_requires_api_key(client):
-    from app.config import settings
-
+def test_admin_list_requires_an_admin_session(client, admin_headers, make_user, session_headers):
     client.post("/api/bookings", json=booking_payload())
 
     assert client.get("/api/bookings").status_code == 401
-    assert client.get("/api/bookings", headers={"x-api-key": "definitely-wrong"}).status_code == 401
+    assert client.get("/api/bookings", headers={"Authorization": "Bearer nonsense"}).status_code == 401
+    # The old shared key is no longer a way in.
+    from app.config import settings
 
-    ok = client.get("/api/bookings", headers={"x-api-key": settings.admin_api_key})
+    assert client.get("/api/bookings", headers={"x-api-key": settings.admin_api_key}).status_code == 401
+
+    driver_id, _ = make_user(role="driver")
+    assert client.get("/api/bookings", headers=session_headers(driver_id)).status_code == 403
+
+    ok = client.get("/api/bookings", headers=admin_headers)
     assert ok.status_code == 200
     rows = ok.json()
     assert len(rows) == 1

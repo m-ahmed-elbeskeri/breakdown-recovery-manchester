@@ -17,7 +17,7 @@ import {
 } from '../config';
 import { TRUST_ITEMS } from '../data';
 import { SERVICE_PAGES, servicePath } from '../services';
-import { PRICING_PATH } from '../routes';
+import { PRICING_PATH, RECRUIT_PATH } from '../routes';
 import { scrollToBooking } from '../ui';
 import { FROM_PRICE } from '../pricing';
 
@@ -381,6 +381,12 @@ export function Footer({ regionName }: { regionName: string }) {
         </p>
         <Link to="/privacy" className="hover:text-red-500 transition-colors underline">
           Privacy Policy
+        </Link>
+        <Link to={RECRUIT_PATH} className="hover:text-red-500 transition-colors underline">
+          Drive with us
+        </Link>
+        <Link to="/login" className="hover:text-red-500 transition-colors underline">
+          Driver and staff sign in
         </Link>
       </div>
     </footer>

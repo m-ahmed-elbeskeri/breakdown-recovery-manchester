@@ -16,7 +16,8 @@ import {
 import { buildFaqItems, type FaqItem } from './data';
 import { FROM_PRICE } from './pricing';
 import { PRICING_FAQ } from './pricingContent';
-import { PRICING_PATH, matchPage } from './routes';
+import { RECRUIT_FAQ } from './recruitContent';
+import { PRICING_PATH, RECRUIT_PATH, matchPage } from './routes';
 import { servicePath, type ServicePage } from './services';
 
 export interface PageSeo {
@@ -170,6 +171,22 @@ export function pricingSeo(): PageSeo {
   };
 }
 
+/** The page for recovery drivers looking for work. */
+export function recruitSeo(): PageSeo {
+  return {
+    title: 'Recovery Driver Jobs Manchester | Drive With Us',
+    description: `Recovery and tow truck drivers wanted across Greater Manchester. Choose your hours, get jobs on your phone with the price shown, and apply online with your licence and documents. Call ${PHONE_DISPLAY}.`,
+    path: RECRUIT_PATH,
+    jsonLd: [
+      faqJsonLd(RECRUIT_FAQ),
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Drive with us', path: RECRUIT_PATH },
+      ]),
+    ],
+  };
+}
+
 /**
  * The head for any prerendered path, or null for pages that are not public
  * (tracking, admin, driver, 404). Used by the build; the pages themselves
@@ -187,6 +204,8 @@ export function seoForPath(pathname: string): PageSeo | null {
       return pricingSeo();
     case 'privacy':
       return null;
+    case 'recruit':
+      return recruitSeo();
   }
 }
 

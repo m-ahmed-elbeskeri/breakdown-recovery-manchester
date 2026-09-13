@@ -54,6 +54,26 @@ export function PrivacyPolicy() {
           phone number for the same job. Neither of you is tracked outside the job.
         </p>
 
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">
+          If you drive for us
+        </h2>
+        <p className="text-slate-700">
+          When you apply to drive we collect what the law and our customers' safety require: your
+          name, contact details, date of birth, address and an emergency contact; your driving
+          licence details, which we check with DVLA using a check code you give us; your vehicle's
+          details; and copies of the documents listed in the application, such as proof of your
+          right to work, a DBS certificate and your insurance. Documents are stored encrypted in
+          transit and are seen only by our office staff, and every time someone opens one it is
+          recorded. Customers on your jobs see your first name, your approved photo and your
+          vehicle, and your live position only while you are on the way to them. We record your
+          location only while you are on duty.
+        </p>
+        <p className="text-slate-700 mt-3">
+          We keep your application and documents while you drive for us. If you stop, or your
+          application is not approved, we delete them after 12 months, except right to work records,
+          which we keep for two years after you stop working with us as the Home Office requires.
+        </p>
+
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">How we use it</h2>
         <p className="text-slate-700">
           Your details are used solely to dispatch a recovery vehicle and to contact you about that

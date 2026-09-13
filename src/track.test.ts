@@ -28,7 +28,16 @@ const base: TrackInfo = {
   canCancel: true,
 };
 
-const dave = { name: 'Dave Smith', phone: null, lat: null, lng: null, locatedAt: null };
+const dave = {
+  name: 'Dave Smith',
+  phone: null,
+  lat: null,
+  lng: null,
+  locatedAt: null,
+  vehicleReg: null,
+  vehicleDescription: null,
+  hasPhoto: false,
+};
 
 describe('headlineFor', () => {
   it('names the driver by first name once one is assigned', () => {

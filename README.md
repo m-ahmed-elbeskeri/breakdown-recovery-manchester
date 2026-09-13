@@ -28,13 +28,22 @@ driver positions and customer tracking.
   upfront price, motorway detection, and an optional vehicle field so the
   driver knows what to look for.
 - **Customer tracking** at `/track/<token>`: status, live ETA, the driver's
-  name and phone, their position on a map while on the way, cancel, and rate
-  the job afterwards.
+  name, photo, truck and phone, their position on a map while on the way,
+  cancel, and rate the job afterwards.
+- **Accounts.** Everyone signs in as themselves at `/login`, with password
+  reset by email. No shared keys.
+- **Driver recruitment** at `/drive-with-us`, and a step-by-step application
+  at `/drivers/apply`: personal details, licence, vehicle, and every document a
+  UK recovery driver needs (right to work, DBS, licence, insurance, V5C, MOT,
+  plus operator's licence, CPC and tacho card over 3.5 tonnes, and NHSS 17 for
+  motorway work). Photos are taken and shrunk on the phone.
 - **Driver console** at `/driver` (installable PWA): on/off duty, live position,
-  take and advance jobs, buzz-and-banner alerts for new jobs and customer
-  cancellations.
-- **Admin** at `/admin`: bookings with driver, vehicle, rating and tracking
-  links; the driver roster; anonymous funnel telemetry.
+  take, advance and hand back jobs, buzz-and-banner alerts, and warnings before
+  a document expires. Blocked from going on duty with lapsed paperwork.
+- **Admin** at `/admin`: bookings with assign and cancel; driver review with a
+  document viewer, approve or send back, a DVLA licence check record, and
+  approve, reject, suspend or reinstate; a compliance page of expiring
+  documents; office accounts; an audit log; anonymous funnel telemetry.
 - **Prerendered.** Every public page is built to static HTML at build time
   (`scripts/prerender.mjs`) so search engines and link previews get the whole
   page, not an empty `<div id="root">`. React hydrates on load.
@@ -103,7 +112,12 @@ src/
   route.ts          Driving distance + ETA (geocoding + OSRM routing), motorway detection
   pricing.ts        Price estimate formula (callout + per-mile, night, motorway)
   track.ts          Customer tracking API client + status wording
-  driver.ts         Driver-console API client + job diffing for alerts
+  driver.ts         Driver API client (application, documents, jobs) + job diffing for alerts
+  driverDocs.ts     The document catalogue (from backend/app/driver_documents.json) + upload prep
+  adminApi.ts       Office API client + audit wording
+  auth.tsx          Signed-in user context, RequireAuth
+  apiClient.ts      Authenticated fetch, blob and upload helpers
+  recruitContent.ts The "Drive with us" page as data
   api.ts            Backend base URL
   metrics.tsx       Live dispatch metrics via context (API, else simulated)
   useBackend.ts     Booking submission with idempotency + offline queue
@@ -111,10 +125,15 @@ src/
   icons.tsx         Iconoir icon re-exports
   entry-server.tsx  Build-time renderer used by scripts/prerender.mjs
   components/       Hero, Layout (header/footer/how-it-works), BookingForm, TrackMap, …
+  components/console.tsx, documents.tsx, profileForm.tsx
+                    Building blocks of the signed-in pages
   pages/            LandingPage (areas), ServicePage, PricingPage, TrackPage,
-                    DriverPage, AdminPage, PrivacyPolicy, NotFoundPage
+                    DriveWithUsPage, PrivacyPolicy, NotFoundPage
+  pages/account/    Sign in, forgot and reset password, account
+  pages/driver/     Apply, application wizard, documents, console
+  pages/admin/      Setup, bookings, drivers, driver review, compliance, team, audit
 scripts/
-  prerender.mjs     Writes dist/<path>/index.html for every public page + sitemap.xml
+  prerender.mjs     Writes dist/<page>.html for every public page + sitemap.xml + _redirects
   render-brand.mjs  Renders the PNG share card and icons from scripts/brand/*.html
 backend/            FastAPI + SQLAlchemy + Alembic API (see backend/README.md)
 ```

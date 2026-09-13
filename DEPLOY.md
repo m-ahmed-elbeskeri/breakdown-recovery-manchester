@@ -17,11 +17,14 @@ Render reads `render.yaml` and builds `backend/Dockerfile` (which runs
 3. **New → Blueprint** → select this repo. Render detects `render.yaml`.
 4. When prompted, fill the secret env vars:
    - `DATABASE_URL` — your Neon string (same one in `backend/.env`)
-   - `ADMIN_API_KEY` — the key in `backend/.env`
+   - `ADMIN_API_KEY` — the key in `backend/.env`. It is only asked for once, to
+     create the first admin account (see "Before you go live")
    - `CORS_ORIGINS` — your site's URL, e.g. `https://carrecoverynearme.uk`
    - `RESEND_API_KEY`, `NOTIFY_EMAIL_TO` — optional (see below)
    - `SITE_URL` — defaults to `https://carrecoverynearme.uk`; only set it if
-     the site lives somewhere else (it builds the tracking link in the alert email)
+     the site lives somewhere else (it builds the tracking link in the alert
+     email, and password links when a request doesn't say where it came from).
+     Until the domain is live, set it to the `pages.dev` address
 5. **Apply** → wait for the build. Your API is live at the service URL Render
    shows, which gets a random suffix when the name is taken. This project's is
    `https://breakdown-recovery-api-dxja.onrender.com` (health: `/api/health`).
@@ -56,13 +59,14 @@ second choice (100 GB/month free).
 ### What `npm run build` produces
 
 Three steps: the client bundle, an SSR bundle, then `scripts/prerender.mjs`
-renders every public page to `dist/<path>/index.html` with its own title,
+renders every public page to `dist/<page>.html` with its own title,
 description, canonical URL, social tags and JSON-LD, and writes `sitemap.xml`.
 Search engines and link previews get complete HTML; React attaches on load.
 
 The prerender step also writes `dist/_redirects`: one 301 per old
 `/breakdown-recovery-<area>` URL to `/car-recovery-<area>`, and 200 rewrites of
-`/track/*`, `/driver`, `/admin` and `/privacy` to the empty app shell
+`/track/*`, `/driver/*`, `/admin/*`, `/drivers/apply`, `/login`,
+`/forgot-password`, `/reset-password` and `/privacy` to the empty app shell
 `app.html`. There is deliberately **no catch-all rule and no wildcard 301**.
 Cloudflare Pages applies redirects before static files, so a catch-all would
 serve the empty shell instead of every prerendered page, and a
@@ -94,9 +98,27 @@ Use `--branch <anything-else>` to get a preview URL first.
    up on a different domain, change those and run `npm run brand:assets`.
 3. Create the `hello@carrecoverynearme.uk` mailbox (it is in the footer and the
    structured data), or change `CONTACT_EMAIL` in `src/config.ts`.
-4. Add at least one driver in `/admin → Drivers`; the driver console picks
-   from that roster.
-5. Rotate the Neon, Resend and admin keys if this repo has ever been shared.
+4. **Create the first admin.** Open `/admin`. On a database with no admin it
+   shows a setup form: enter `ADMIN_API_KEY`, your name, email and a password.
+   From then on the key does nothing and everyone signs in at `/login`. Add
+   other office staff under `/admin → Team`.
+5. **Give existing drivers a sign-in.** Drivers who were on the roster before
+   accounts existed are kept as approved. Open each one under
+   `/admin → Drivers`, create a sign-in with their email, and send them the
+   link. Upload their documents there too, so the compliance page can track
+   expiry dates. Until their required documents are approved and in date they
+   can't go on duty.
+6. New drivers apply at `/drive-with-us` → `/drivers/apply`. Each application
+   appears under `/admin → Drivers → To review`.
+7. Rotate the Neon, Resend and admin keys if this repo has ever been shared.
+
+### Shipping a schema change
+
+The API migrates the database when it boots. Deploy the API first and let it
+finish, then deploy the site. **Never run `alembic upgrade head` against Neon
+from your own machine** (`backend/.env` points there): the database moves
+ahead of the code Render is running, and every restart fails with "Can't locate
+revision" until the new code is deployed.
 
 Then verify:
 
@@ -104,9 +126,10 @@ Then verify:
   page should be full HTML with `<title>Car Recovery Bolton …`.
 - Open `https://your-domain/breakdown-recovery-bolton`: it should 301 to the
   new address.
-- Make a test booking, open the tracking link, sign into `/driver`, go on
-  duty and take the job: the tracking page should name the driver and, once
-  "On my way" is tapped, show the truck on the map.
+- Make a test booking, open the tracking link, sign in as an approved driver
+  at `/login`, go on duty and take the job: the tracking page should name the
+  driver, show their photo and registration, and, once "On my way" is tapped,
+  show the truck on the map.
 
 ## Email alerts (optional)
 

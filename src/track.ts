@@ -17,6 +17,10 @@ export interface TrackDriver {
   lat: number | null;
   lng: number | null;
   locatedAt: string | null;
+  vehicleReg: string | null;
+  vehicleDescription: string | null;
+  /** An approved photo is available at /api/track/<token>/driver-photo. */
+  hasPhoto: boolean;
 }
 
 export interface TrackInfo {
@@ -41,7 +45,7 @@ export interface TrackInfo {
   enRouteAt: string | null;
   onSceneAt: string | null;
   finishedAt: string | null;
-  cancelledBy: 'customer' | 'driver' | null;
+  cancelledBy: 'customer' | 'driver' | 'office' | null;
   rating: number | null;
   canCancel: boolean;
 }
@@ -117,6 +121,22 @@ export function headlineFor(info: TrackInfo): string {
 }
 
 export const firstName = (name: string): string => name.trim().split(/\s+/)[0] || name;
+
+export const driverPhotoUrl = (token: string): string =>
+  `${API_BASE}/api/track/${encodeURIComponent(token)}/driver-photo`;
+
+/**
+ * A number plate the way it is printed: "AB12 CDE", "A123 BCD", "ABC 123D".
+ * Anything that fits none of the standard formats is left as it is.
+ */
+export function formatReg(reg: string): string {
+  const s = reg.replace(/\s+/g, '').toUpperCase();
+  if (/^[A-Z]{2}\d{2}[A-Z]{3}$/.test(s) || /^[A-Z]\d{1,3}[A-Z]{3}$/.test(s)) {
+    return `${s.slice(0, -3)} ${s.slice(-3)}`;
+  }
+  if (/^[A-Z]{3}\d{1,3}[A-Z]$/.test(s)) return `${s.slice(0, 3)} ${s.slice(3)}`;
+  return s;
+}
 
 /** "3 min ago" for a driver's last reported position. */
 export function agoLabel(iso: string | null): string {

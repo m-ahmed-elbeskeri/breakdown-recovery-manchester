@@ -19,8 +19,10 @@ import {
   TrackError,
   agoLabel,
   cancelTrack,
+  driverPhotoUrl,
   fetchTrack,
   firstName,
+  formatReg,
   headlineFor,
   rateTrack,
   stepIndex,
@@ -211,13 +213,34 @@ export function TrackPage() {
 
             {info.driver && info.status !== 'cancelled' && (
               <section className="border-2 border-neutral-800 bg-neutral-900 p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0">
+                {info.driver.hasPhoto && (
+                  <img
+                    src={driverPhotoUrl(token)}
+                    alt={`Photo of ${firstName(info.driver.name)}`}
+                    className="w-16 h-16 object-cover border-2 border-neutral-700 shrink-0"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">
                     Your driver
                   </div>
                   <div className="font-display text-xl uppercase tracking-tight truncate">
                     {info.driver.name}
                   </div>
+                  {(info.driver.vehicleReg || info.driver.vehicleDescription) && (
+                    <div className="text-[12px] text-neutral-300 font-medium">
+                      Look for{' '}
+                      {info.driver.vehicleDescription ? `a ${info.driver.vehicleDescription}` : 'the truck'}
+                      {info.driver.vehicleReg && (
+                        <>
+                          {' '}
+                          <span className="inline-block bg-yellow-400 text-neutral-950 font-display px-1.5 tracking-wider">
+                            {formatReg(info.driver.vehicleReg)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
                   {info.driver.locatedAt && (
                     <div className="text-[11px] text-neutral-400 font-medium">
                       Position updated {agoLabel(info.driver.locatedAt)}

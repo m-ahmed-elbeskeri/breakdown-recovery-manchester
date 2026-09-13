@@ -6,7 +6,7 @@
 // the job. Everything else is noise on a dashboard nobody then reads.
 
 import { useCallback, useEffect, useState } from 'react';
-import { API_BASE } from '../api';
+import { apiFetch } from '../apiClient';
 
 interface CountRow {
   label: string;
@@ -51,23 +51,19 @@ const SERVICE_LABELS: Record<string, string> = {
   other: 'Not sure / other',
 };
 
-export function TelemetryPanel({ apiKey }: { apiKey: string }) {
+export function TelemetryPanel() {
   const [data, setData] = useState<TelemetrySummary | null>(null);
   const [days, setDays] = useState<number>(30);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/telemetry?days=${days}`, {
-        headers: { 'x-api-key': apiKey },
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      setData((await res.json()) as TelemetrySummary);
+      setData(await apiFetch<TelemetrySummary>(`/api/admin/telemetry?days=${days}`));
       setError(null);
     } catch {
       setError('Could not load telemetry.');
     }
-  }, [apiKey, days]);
+  }, [days]);
 
   useEffect(() => {
     void load();
