@@ -36,11 +36,38 @@ export function parseLatLng(text: string): LatLng | null {
 
 const geocodeCache = new Map<string, LatLng | null>();
 
+/** Just the outward half of a postcode, e.g. "M22" or "BL9". */
+const OUTWARD_ONLY = /^[A-Z]{1,2}\d[A-Z\d]?$/i;
+
+/**
+ * The centre of a postcode district. Nominatim has no idea what "M22" is on
+ * its own and matched a stream in County Antrim, pricing a Wythenshawe job at
+ * over £1,200; postcodes.io is built on Royal Mail data and knows every one.
+ */
+async function geocodeOutward(outward: string, signal?: AbortSignal): Promise<LatLng | null> {
+  const res = await fetch(`https://api.postcodes.io/outcodes/${encodeURIComponent(outward)}`, {
+    signal,
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`postcode lookup failed (${res.status})`);
+  const data = (await res.json()) as { result?: { latitude?: number; longitude?: number } };
+  const { latitude, longitude } = data.result ?? {};
+  return typeof latitude === 'number' && typeof longitude === 'number'
+    ? { lat: latitude, lng: longitude }
+    : null;
+}
+
 async function geocode(query: string, signal?: AbortSignal): Promise<LatLng | null> {
   const key = query.trim().toLowerCase();
   if (!key) return null;
   const cached = geocodeCache.get(key);
   if (cached !== undefined) return cached;
+
+  if (OUTWARD_ONLY.test(key)) {
+    const result = await geocodeOutward(key.toUpperCase(), signal);
+    geocodeCache.set(key, result);
+    return result;
+  }
 
   const url =
     'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=gb&q=' +
@@ -154,6 +181,8 @@ export interface PlaceSuggestion {
 }
 
 interface PhotonProps {
+  osm_key?: string;
+  osm_value?: string;
   name?: string;
   street?: string;
   housenumber?: string;
@@ -162,6 +191,32 @@ interface PhotonProps {
   district?: string;
   county?: string;
   state?: string;
+}
+
+/**
+ * Street furniture carries reference numbers that look like what customers
+ * type. A lamp post tagged "M22" in Staffordshire used to top the list for the
+ * Wythenshawe postcode M22, quoting a tow 35 miles longer than the real one.
+ * Nobody breaks down "at" one of these, so they are never offered.
+ */
+const NOT_A_PLACE = new Set([
+  'street_lamp',
+  'milestone',
+  'marker',
+  'traffic_signals',
+  'crossing',
+  'give_way',
+  'stop',
+  'turning_circle',
+]);
+
+/** A full ("M22 4EA") or outward-only ("M22") UK postcode, and nothing else. */
+const POSTCODE_QUERY = /^([A-Z]{1,2}\d[A-Z\d]?)(?:\s*\d[A-Z]{2})?$/i;
+
+/** The outward code of a postcode-shaped query, e.g. "M22", or `null`. */
+export function postcodeOutward(query: string): string | null {
+  const match = query.trim().match(POSTCODE_QUERY);
+  return match ? match[1].toUpperCase() : null;
 }
 
 /** Build a human label: "Kwik Fit, 12 Bury New Rd, Prestwich, M25 0LD". */
@@ -208,15 +263,25 @@ export async function suggestPlaces(
         properties?: PhotonProps;
       }>;
     };
+    // A postcode is a statement of where someone is. Places actually in that
+    // postcode go first, ahead of anything that merely shares its characters.
+    const outward = postcodeOutward(q);
+    const inPostcode = (props?: PhotonProps) =>
+      outward !== null && props?.postcode?.trim().toUpperCase().split(/\s+/)[0] === outward;
+    const features = [...(data.features ?? [])].sort(
+      (a, b) => Number(inPostcode(b.properties)) - Number(inPostcode(a.properties)),
+    );
+
     const out: PlaceSuggestion[] = [];
     // Photon regularly returns the same place twice (separate OSM nodes for a
     // building and its entrance, say). Two identical rows in a dropdown read as
     // a bug, so collapse on the label the customer actually sees.
     const seenLabels = new Set<string>();
-    for (const f of data.features ?? []) {
+    for (const f of features) {
       const coords = f.geometry?.coordinates;
       const props = f.properties;
       if (!coords || !props) continue;
+      if (props.osm_value && NOT_A_PLACE.has(props.osm_value)) continue;
       const [lng, lat] = coords;
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
       const label = formatSuggestion(props);
@@ -289,15 +354,90 @@ export function detectMotorway(text: string): string | null {
 }
 
 /**
+ * Public Overpass servers, tried in order. The flagship overpass-api.de
+ * rate-limits and times out under load (429s and 504s in testing), so the
+ * mail.ru mirror, which answered consistently, goes first.
+ */
+const OVERPASS_URLS = [
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
+];
+/**
+ * How close a pin must be to a carriageway to count as on it. Tight on
+ * purpose: a service road beside the M60, or a bridge over it, is a normal job
+ * and must not pick up the surcharge.
+ */
+const MOTORWAY_RADIUS_M = 25;
+const OVERPASS_TIMEOUT_MS = 5000;
+
+/**
+ * Ask OpenStreetMap directly whether a motorway or slip road runs under this
+ * point. Returns the designation ("M60", or "Motorway" when untagged), `null`
+ * when a server confirmed there is none, and `undefined` when no server could
+ * answer — so the caller can tell "not a motorway" from "don't know".
+ */
+async function motorwayFromOverpass(
+  { lat, lng }: LatLng,
+  signal?: AbortSignal,
+): Promise<string | null | undefined> {
+  const query =
+    `[out:json][timeout:5];way(around:${MOTORWAY_RADIUS_M},${lat},${lng})` +
+    `[highway~"^motorway(_link)?$"];out tags;`;
+
+  for (const url of OVERPASS_URLS) {
+    if (signal?.aborted) return undefined;
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort);
+    const timer = setTimeout(abort, OVERPASS_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        body: new URLSearchParams({ data: query }),
+        signal: controller.signal,
+      });
+      if (!res.ok) continue;
+      const data = (await res.json()) as {
+        elements?: Array<{ tags?: { highway?: string; ref?: string } }>;
+      };
+      const ways = data.elements ?? [];
+      if (ways.length === 0) return null;
+      // Prefer the main carriageway's number over a slip road's, and take the
+      // motorway part of a shared ref like "M60;A580".
+      const main = ways.find((w) => w.tags?.highway === 'motorway') ?? ways[0];
+      const ref = main.tags?.ref
+        ?.split(';')
+        .map((r) => r.trim())
+        .find((r) => /^(M\d+|A\d+\(M\))$/i.test(r));
+      return ref ? ref.toUpperCase() : 'Motorway';
+    } catch {
+      // Timed out or unreachable: try the next server.
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+    }
+  }
+  return undefined;
+}
+
+/**
  * Motorway lookup for a coordinate, for the "Find Me" path where the customer
  * hands over GPS and never types a road name at all — precisely the person
  * least able to describe where they are. Best-effort: returns null on any
  * failure rather than throwing, since this only adjusts a price.
+ *
+ * Overpass answers the actual question (is there a motorway under this
+ * point?). The Photon reverse lookup only reports the nearest named feature,
+ * which is as likely to be a lamp post as a road, so it is the fallback.
  */
 export async function detectMotorwayAt(
-  { lat, lng }: LatLng,
+  point: LatLng,
   signal?: AbortSignal,
 ): Promise<string | null> {
+  const fromOsm = await motorwayFromOverpass(point, signal);
+  if (fromOsm !== undefined) return fromOsm;
+
+  const { lat, lng } = point;
   try {
     const res = await fetch(
       `${PHOTON_URL.replace('/api/', '/reverse')}?lat=${lat}&lon=${lng}&limit=1`,
