@@ -9,6 +9,7 @@ import { HOME_REGION } from '../config';
 import { Hero } from '../components/Hero';
 import {
   Coverage,
+  DriverStrip,
   FinalCta,
   Footer,
   Header,
@@ -124,6 +125,7 @@ export function RegionLanding({ regionName }: { regionName: string }) {
           <FaqSection regionName={regionName} />
           <Coverage />
           <FinalCta regionName={regionName} />
+          <DriverStrip />
         </main>
         <Footer regionName={regionName} />
         <MobileCta />

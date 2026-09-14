@@ -1,7 +1,7 @@
 # Car Recovery Near Me
 
 **carrecoverynearme.uk** — 24/7 car recovery, towing and roadside help across
-Greater Manchester, run the way a taxi app runs: the price on the screen before
+Greater Manchester, with the price on the screen before
 the customer hands over a phone number, a live wait measured from where the
 nearest driver actually is, and a tracking page that shows the driver coming to
 them.

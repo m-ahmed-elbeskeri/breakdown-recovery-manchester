@@ -1043,7 +1043,7 @@ export function BookingForm({
                 )}
 
                 {confirmedToken && trackingUrl ? (
-                  // The "Uber" part. A page that shows the driver who has the
+                  // The tracking link. A page that shows the driver who has the
                   // job, a live ETA and the truck on a map. Offered as a link
                   // rather than a redirect so the confirmation stays readable.
                   <div className="mt-5 w-full max-w-xs flex flex-col items-center gap-2">

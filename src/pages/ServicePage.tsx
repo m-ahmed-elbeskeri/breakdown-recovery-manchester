@@ -9,6 +9,7 @@ import { HOME_REGION } from '../config';
 import { Hero } from '../components/Hero';
 import {
   Coverage,
+  DriverStrip,
   FinalCta,
   Footer,
   Header,
@@ -176,6 +177,7 @@ export function ServicePage({ page }: { page: ServicePageData }) {
 
           <Coverage />
           <FinalCta regionName={HOME_REGION} />
+          <DriverStrip />
         </main>
         <Footer regionName={HOME_REGION} />
         <MobileCta />

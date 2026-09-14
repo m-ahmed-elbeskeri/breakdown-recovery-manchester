@@ -2,7 +2,17 @@
 // hero, the coverage grid, the closing call to action and the footer.
 
 import { Link } from 'react-router-dom';
-import { ArrowRight, PhoneCall, Phone, MapPin, Clock, Pin, Coins, Navigation } from '../icons';
+import {
+  ArrowRight,
+  PhoneCall,
+  Phone,
+  MapPin,
+  Clock,
+  Pin,
+  Coins,
+  Navigation,
+  Truck,
+} from '../icons';
 import { Logo } from './Logo';
 import { Reveal } from './motion';
 import {
@@ -95,6 +105,12 @@ export function Header({ regionName, bookTo }: { regionName: string; bookTo?: st
             Prices
           </Link>
           <Link
+            to={RECRUIT_PATH}
+            className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 transition-colors"
+          >
+            Drive with us
+          </Link>
+          <Link
             to="/#services"
             className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 transition-colors"
           >
@@ -174,7 +190,7 @@ export function HowItWorks() {
             How it works
           </div>
           <h2 className="font-sans font-extrabold text-3xl md:text-5xl text-slate-950 tracking-tight mb-4">
-            Recovery that works like a taxi app
+            Your price, your wait, your driver, on screen
           </h2>
           <p className="text-lg text-slate-600 font-medium">
             No ringing round. No "someone will call you back". No surprise when the truck arrives.
@@ -292,6 +308,44 @@ export function FinalCta({ regionName }: { regionName: string }) {
           </button>
         </div>
       </Reveal>
+    </section>
+  );
+}
+
+/** A slim band for recovery drivers who land on a customer page. */
+export function DriverStrip() {
+  return (
+    <section className="bg-slate-100 border-t-2 border-slate-200 py-8 px-4" aria-label="For drivers">
+      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <span className="w-12 h-12 bg-neutral-950 text-yellow-400 flex items-center justify-center shrink-0">
+            <Truck className="w-6 h-6" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="font-sans font-extrabold text-xl tracking-tight text-slate-950">
+              Own a recovery truck?
+            </h2>
+            <p className="text-slate-600 font-medium text-sm mt-1">
+              Get jobs near you sent to your phone, with the price already worked out. You choose
+              your hours.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+          <Link
+            to={RECRUIT_PATH}
+            className="bg-neutral-950 hover:bg-neutral-800 text-white font-display px-6 py-3 uppercase tracking-wider text-sm inline-flex items-center gap-2"
+          >
+            Drive with us <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            to="/login"
+            className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 underline"
+          >
+            Driver sign in
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }
