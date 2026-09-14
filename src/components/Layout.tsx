@@ -64,21 +64,24 @@ export function Wordmark({ className = '' }: { className?: string }) {
 function BookNow({
   to,
   className,
+  trackAs,
   children,
 }: {
   to?: string;
   className: string;
+  /** Which "Book" button this is, in the analytics. */
+  trackAs: string;
   children: React.ReactNode;
 }) {
   if (to) {
     return (
-      <Link to={to} className={className}>
+      <Link to={to} className={className} data-track={trackAs}>
         {children}
       </Link>
     );
   }
   return (
-    <button type="button" onClick={scrollToBooking} className={className}>
+    <button type="button" onClick={scrollToBooking} className={className} data-track={trackAs}>
       {children}
     </button>
   );
@@ -106,6 +109,7 @@ export function Header({ regionName, bookTo }: { regionName: string; bookTo?: st
           </Link>
           <Link
             to={RECRUIT_PATH}
+            data-track="header-drive"
             className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 transition-colors"
           >
             Drive with us
@@ -130,6 +134,7 @@ export function Header({ regionName, bookTo }: { regionName: string; bookTo?: st
           </div>
           <BookNow
             to={bookTo}
+            trackAs="header-book"
             className="bg-yellow-400 hover:bg-yellow-300 text-neutral-950 px-7 py-3 rounded-none font-bold text-base uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 shadow-sm hover:shadow-md"
           >
             Book Now <ArrowRight className="w-4 h-4" />
@@ -302,6 +307,7 @@ export function FinalCta({ regionName }: { regionName: string }) {
           <button
             type="button"
             onClick={scrollToBooking}
+            data-track="final-cta-book"
             className="bg-transparent text-white hover:bg-white hover:text-navy-900 border-2 border-white/70 font-display py-4 px-8 rounded-none flex items-center justify-center gap-3 text-xl uppercase tracking-wider transition-all hover:-translate-y-0.5"
           >
             Book Online Now
@@ -334,6 +340,7 @@ export function DriverStrip() {
         <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
           <Link
             to={RECRUIT_PATH}
+            data-track="driver-strip-apply"
             className="bg-neutral-950 hover:bg-neutral-800 text-white font-display px-6 py-3 uppercase tracking-wider text-sm inline-flex items-center gap-2"
           >
             Drive with us <ArrowRight className="w-4 h-4" />
@@ -463,6 +470,7 @@ export function MobileCta({ bookTo }: { bookTo?: string }) {
         </a>
         <BookNow
           to={bookTo}
+          trackAs="mobile-bar-book"
           className="flex-1 bg-neutral-950 text-white font-bold text-base py-3.5 rounded-sm flex items-center justify-center active:scale-95 transition-transform shadow-md"
         >
           Book Online

@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 import { MotionConfig } from 'motion/react';
 import { HOME_REGION, regionPath } from './config';
 import { matchPage } from './routes';
+import { setTelemetryRegion, startTelemetry, trackPageView } from './telemetry';
 import { RegionLanding } from './pages/LandingPage';
 import { ServicePage } from './pages/ServicePage';
 import { PricingPage } from './pages/PricingPage';
@@ -73,6 +74,31 @@ function ScrollToTop() {
   return null;
 }
 
+function pageKind(pathname: string, match: ReturnType<typeof matchPage>): string {
+  if (match) return match.kind === 'region' && pathname === '/' ? 'home' : match.kind;
+  if (pathname.startsWith('/track/')) return 'track';
+  if (pathname === '/drivers/apply') return 'apply';
+  return 'other';
+}
+
+/**
+ * One page view per navigation, counted in one place so no page can forget to
+ * count itself. Rendered after the routes, so a page's own effects have run.
+ * Signed-in staff and driver pages are skipped inside trackPageView.
+ */
+function PageAnalytics() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    startTelemetry();
+    const match = matchPage(pathname);
+    // An old area address that is about to redirect is not a visit to anything.
+    if (match?.kind === 'region' && match.legacy) return;
+    setTelemetryRegion(match?.kind === 'region' ? match.region : undefined);
+    trackPageView(pathname, pageKind(pathname, match));
+  }, [pathname]);
+  return null;
+}
+
 /** The route table, shared by the browser and the build-time prerender. */
 export function AppRoutes() {
   return (
@@ -107,6 +133,7 @@ export default function App() {
       <BrowserRouter>
         <ScrollToTop />
         <AppRoutes />
+        <PageAnalytics />
       </BrowserRouter>
     </MotionConfig>
   );

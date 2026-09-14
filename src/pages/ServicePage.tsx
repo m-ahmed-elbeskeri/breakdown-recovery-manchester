@@ -23,15 +23,13 @@ import { MetricsProvider } from '../metrics';
 import { serviceSeo, usePageSeo } from '../seo';
 import { SERVICE_PAGES, servicePath, type ServicePage as ServicePageData } from '../services';
 import { PRICING_PATH } from '../routes';
-import { setTelemetryRegion, startTelemetry, track } from '../telemetry';
+import { setTelemetryRegion } from '../telemetry';
 
 export function ServicePage({ page }: { page: ServicePageData }) {
   useEffect(() => {
-    startTelemetry();
     // Not an area, so it must not show up in the "which area pages earn their
     // keep" chart. The path already says which service page it was.
     setTelemetryRegion(undefined);
-    track('page_view');
   }, [page.slug]);
 
   const seo = useMemo(() => serviceSeo(page), [page]);

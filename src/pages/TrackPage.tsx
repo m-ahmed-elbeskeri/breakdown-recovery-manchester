@@ -14,6 +14,7 @@ import { PHONE_TEL, PHONE_DISPLAY } from '../config';
 import { serviceLabel } from '../data';
 import { whenLabel } from '../driver';
 import { useNoIndex } from '../seo';
+import { track } from '../telemetry';
 import {
   TRACK_STEPS,
   TrackError,
@@ -102,12 +103,21 @@ export function TrackPage() {
     return () => document.removeEventListener('visibilitychange', onShow);
   }, [load]);
 
+  // Counted once per visit, with where the job had got to when they looked.
+  const viewedRef = useRef(false);
+  useEffect(() => {
+    if (!info || viewedRef.current) return;
+    viewedRef.current = true;
+    track('track_viewed', { status: info.status });
+  }, [info]);
+
   const cancel = async () => {
     setBusy(true);
     setActionError(null);
     try {
       setInfo(await cancelTrack(token));
       setConfirmCancel(false);
+      track('track_cancelled');
     } catch (err) {
       setActionError(
         err instanceof TrackError && err.status === 409
@@ -126,6 +136,7 @@ export function TrackPage() {
     try {
       setInfo(await rateTrack(token, stars, comment));
       setThanked(true);
+      track('track_rated', { stars });
     } catch {
       setActionError('Could not send your rating. Please try again.');
     } finally {

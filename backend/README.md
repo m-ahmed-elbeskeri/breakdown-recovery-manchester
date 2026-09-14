@@ -64,7 +64,9 @@ account. The shared `ADMIN_API_KEY` is no longer a login (see Accounts below).
 | GET      | `/api/admin/compliance`                                | Expired, expiring and missing documents on working drivers |
 | GET      | `/api/admin/audit`                                     | Who did what                                             |
 | GET/POST | `/api/admin/users`, `/users/{id}/reset-link`, `/users/{id}/active` | Office accounts                              |
-| GET      | `/api/admin/telemetry?days`                            | Funnel, areas, services, devices, referrers              |
+| GET      | `/api/admin/analytics?days`                            | Site analytics against the previous period: trend, sources, campaigns, pages, funnels, clicks, speed, errors |
+| GET      | `/api/admin/analytics/live`                            | Visits active in the last 5 minutes and the latest events |
+| GET      | `/api/admin/telemetry?days`                            | The older booking-funnel summary                         |
 
 Interactive docs run at `http://localhost:8000/docs`.
 

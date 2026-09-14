@@ -25,7 +25,7 @@ import { Testimonials } from '../components/Testimonials';
 import { FaqSection } from '../components/FaqSection';
 import { MetricsProvider } from '../metrics';
 import { regionSeo, usePageSeo } from '../seo';
-import { setTelemetryRegion, startTelemetry, track } from '../telemetry';
+import { setTelemetryRegion } from '../telemetry';
 
 function SeoContent({ regionName }: { regionName: string }) {
   return (
@@ -75,12 +75,10 @@ function useHashScroll() {
 }
 
 export function RegionLanding({ regionName }: { regionName: string }) {
-  // One page view per region, so the 36 area pages can be judged on the work
-  // they actually bring rather than on faith.
+  // Bookings and calls made from this page are credited to its area. The page
+  // view itself is counted once for every route, in App.
   useEffect(() => {
-    startTelemetry();
     setTelemetryRegion(regionName);
-    track('page_view');
   }, [regionName]);
 
   const seo = useMemo(() => regionSeo(regionName), [regionName]);

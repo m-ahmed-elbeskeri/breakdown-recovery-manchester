@@ -12,15 +12,13 @@ import { Reveal } from '../components/motion';
 import { FaqSection } from '../components/FaqSection';
 import { pricingSeo, usePageSeo } from '../seo';
 import { EXAMPLES, FROM_PRICE, NIGHT_PERCENT, PRICING_FAQ, TARIFF } from '../pricingContent';
-import { setTelemetryRegion, startTelemetry, track } from '../telemetry';
+import { setTelemetryRegion } from '../telemetry';
 
 const seo = pricingSeo();
 
 export function PricingPage() {
   useEffect(() => {
-    startTelemetry();
     setTelemetryRegion(undefined);
-    track('page_view');
     window.scrollTo(0, 0);
   }, []);
   usePageSeo(seo);

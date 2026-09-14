@@ -401,10 +401,12 @@ export function BookingForm({
         // geocoder could infer from the string we formatted out of it.
         setPickupPin({ lat: latitude, lng: longitude });
         setIsLocating(false);
+        track('find_me_used', { ok: true });
       },
       () => {
         setSubmitError('Could not get your location. Please type it in or grant location access.');
         setIsLocating(false);
+        track('find_me_used', { ok: false });
       },
       GEO_OPTIONS,
     );

@@ -17,7 +17,7 @@ import {
   RECRUIT_STEPS,
   REQUIREMENTS,
 } from '../recruitContent';
-import { setTelemetryRegion, startTelemetry, track } from '../telemetry';
+import { setTelemetryRegion } from '../telemetry';
 
 const seo = recruitSeo();
 
@@ -25,6 +25,7 @@ function ApplyButton({ className = '' }: { className?: string }) {
   return (
     <Link
       to={APPLY_PATH}
+      data-track="recruit-apply"
       className={`inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display px-8 py-4 uppercase tracking-wider text-lg shadow-md hover:shadow-lg ${className}`}
     >
       Apply to drive <ArrowRight className="w-5 h-5" />
@@ -34,9 +35,7 @@ function ApplyButton({ className = '' }: { className?: string }) {
 
 export function DriveWithUsPage() {
   useEffect(() => {
-    startTelemetry();
     setTelemetryRegion(undefined);
-    track('page_view');
   }, []);
   usePageSeo(seo);
 

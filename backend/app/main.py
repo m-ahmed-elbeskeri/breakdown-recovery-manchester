@@ -1,14 +1,19 @@
+import re
 import secrets
-from datetime import timedelta
+from datetime import date, timedelta
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
+from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import audit, models, schemas
 from .admin import router as admin_router
+from .analytics import BOOKING_FUNNEL as FUNNEL
+from .analytics import router as analytics_router
 from .auth import require_admin, revoke_sessions
 from .auth import router as auth_router
 from .config import settings
@@ -47,6 +52,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(drivers_router)
 app.include_router(admin_router)
+app.include_router(analytics_router)
 
 
 @app.get("/api/health")
@@ -417,31 +423,120 @@ def rate_booking(
 
 # ── Telemetry ───────────────────────────────────────────────────────────────
 
-FUNNEL = [
-    ("page_view", "Landed on the site"),
-    ("booking_started", "Typed a pickup"),
-    ("details_done", "Gave a phone number"),
-    ("service_chosen", "Chose a service"),
-    ("quote_shown", "Saw a price"),
-    ("dispatch_requested", "Pressed dispatch"),
-    ("booking_confirmed", "Booking confirmed"),
-]
+# Only the events the site actually sends. Anything else posted here is noise.
+ALLOWED_EVENTS = frozenset(
+    {
+        "page_view", "page_engagement", "link_clicked", "cta_clicked", "outbound_clicked",
+        "email_clicked", "call_clicked", "faq_opened", "booking_started", "details_done",
+        "service_chosen", "quote_shown", "dispatch_requested", "booking_confirmed", "form_error",
+        "find_me_used", "track_viewed", "track_cancelled", "track_rated", "install_prompted",
+        "vitals", "js_error",
+    }
+)
+# Search engines, link previews, speed testers, monitors and scripts. The site
+# skips these itself; this catches anything that posts directly.
+BOT_AGENT = re.compile(
+    r"bot\b|bot/|crawl|spider|slurp|headless|lighthouse|pagespeed|gtmetrix|pingdom|uptime|"
+    r"facebookexternalhit|embedly|preview|curl/|wget/|python-requests|go-http-client",
+    re.IGNORECASE,
+)
+REFERRER_HOST = re.compile(r"[a-z0-9.-]{1,120}")
+REGION_NAME = re.compile(r"[A-Za-z' .-]{1,60}")
+DEVICES = frozenset({"mobile", "tablet", "desktop"})
+# One browser tab cannot plausibly do more than this in a day.
+MAX_EVENTS_PER_SESSION_DAY = 2000
+# Staff and drivers' signed-in pages. The site never sends these; if anything
+# does, they are not stored.
+PRIVATE_PATH = re.compile(r"^/(admin|driver|login|forgot-password|reset-password)(/|$)")
+# Analytics are kept for 13 months, then deleted.
+EVENT_RETENTION_DAYS = 395
+_last_purge: date | None = None
+
+
+def _event_path(path: str) -> str:
+    """Only the path, and never a tracking link's token: that token opens somebody's booking."""
+    path = path.split("?", 1)[0].split("#", 1)[0] or "/"
+    return "/track" if path.startswith("/track/") else path[:120]
+
+
+def _event_payload(payload: dict | None) -> dict | None:
+    """Short labels, numbers and yes/no only. Nothing that could be somebody's words."""
+    if not isinstance(payload, dict):
+        return None
+    kept: dict = {}
+    for key, value in list(payload.items())[:16]:
+        if not isinstance(key, str) or len(key) > 30:
+            continue
+        if value is None or isinstance(value, (bool, int, float)):
+            kept[key] = value
+        elif isinstance(value, str) and len(value) <= 60:
+            kept[key] = value
+    return kept or None
+
+
+MAX_EVENT_BODY_BYTES = 64_000
 
 
 @app.post("/api/events", status_code=204)
-def record_events(batch: schemas.EventBatch, db: Session = Depends(get_db)) -> None:
-    db.add_all(
-        models.Event(
-            name=e.name[:40],
-            session_id=e.sessionId[:40],
-            path=e.path[:120],
-            region=e.region,
-            device=e.device,
-            referrer=e.referrer,
-            payload=e.payload,
+async def record_events(request: Request, db: Session = Depends(get_db)) -> None:
+    """Anonymous events from the site.
+
+    Read from the raw body rather than as a JSON-typed request: the site sends
+    text/plain so the browser can post straight to this other domain without a
+    preflight, which a beacon sent as a page closes has no time to wait for.
+    """
+    body = await request.body()
+    if len(body) > MAX_EVENT_BODY_BYTES:
+        raise HTTPException(status_code=413, detail="Too many events at once.")
+    if BOT_AGENT.search(request.headers.get("user-agent", "")):
+        return
+    try:
+        batch = schemas.EventBatch.model_validate_json(body)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail="Events were not in the expected shape.") from exc
+    await run_in_threadpool(_store_events, db, batch)
+
+
+def _store_events(db: Session, batch: schemas.EventBatch) -> None:
+    global _last_purge
+    kept = []
+    counted: dict[str, int] = {}
+    day_ago = now() - timedelta(days=1)
+    for e in batch.events:
+        path = _event_path(e.path)
+        if e.name not in ALLOWED_EVENTS or PRIVATE_PATH.match(path):
+            continue
+        session = e.sessionId[:40]
+        if session != "anonymous":
+            if session not in counted:
+                counted[session] = db.scalar(
+                    select(func.count())
+                    .select_from(models.Event)
+                    .where(models.Event.session_id == session, models.Event.created_at >= day_ago)
+                ) or 0
+            if counted[session] >= MAX_EVENTS_PER_SESSION_DAY:
+                continue
+            counted[session] += 1
+        kept.append(
+            models.Event(
+                name=e.name,
+                session_id=session,
+                path=path,
+                region=e.region if e.region and REGION_NAME.fullmatch(e.region) else None,
+                device=e.device if e.device in DEVICES else None,
+                referrer=e.referrer if e.referrer and REFERRER_HOST.fullmatch(e.referrer) else None,
+                payload=_event_payload(e.payload),
+            )
         )
-        for e in batch.events
-    )
+    db.add_all(kept)
+    today = now().date()
+    if _last_purge != today:
+        _last_purge = today
+        db.execute(
+            delete(models.Event).where(
+                models.Event.created_at < now() - timedelta(days=EVENT_RETENTION_DAYS)
+            )
+        )
     db.commit()
 
 

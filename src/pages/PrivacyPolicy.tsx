@@ -83,9 +83,14 @@ export function PrivacyPolicy() {
 
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">Site analytics</h2>
         <p className="text-slate-700">
-          We count visits and where people give up in the booking form so we can improve it. This
-          uses a random identifier that lives only in your browser tab and is discarded when it
-          closes. No cookies, no IP addresses, and never anything you type into the form.
+          We measure how the site is used so we can improve it: which pages are visited and for
+          how long, how far down a page people scroll, which buttons, links and questions are
+          pressed, where people give up in the booking form, how quickly pages load, whether
+          anything breaks, and which website or advert brought the visit. This uses a random
+          identifier that lives only in your browser tab and is discarded when it closes. We use
+          no cookies and record no IP addresses. We never record anything you type, your phone
+          number or your location, and we never measure the pages drivers and staff use after
+          signing in. These records are deleted after 13 months.
         </p>
 
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">

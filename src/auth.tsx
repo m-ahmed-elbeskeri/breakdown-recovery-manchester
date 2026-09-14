@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { ApiError, apiFetch, getToken, setToken, SIGNED_OUT_EVENT } from './apiClient';
 import { FullScreenMessage, PrimaryButton, SecondaryButton } from './components/console';
+import { markInternalBrowser } from './telemetry';
 
 export type Role = 'admin' | 'driver';
 export type DriverStatus = 'draft' | 'submitted' | 'active' | 'rejected' | 'suspended';
@@ -64,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setUser(await apiFetch<User>('/api/auth/me'));
       setStatus('signed-in');
+      // Staff and drivers are not customers; keep their visits out of the analytics.
+      markInternalBrowser();
     } catch (err) {
       if (err instanceof ApiError && err.status !== 0) {
         setUser(null);
@@ -99,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const adopt = useCallback((session: Session) => {
     setToken(session.token);
+    markInternalBrowser();
     setUser(session.user);
     setStatus('signed-in');
     return session.user;

@@ -3,16 +3,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, NavLink, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { Home } from '../../icons';
 import { apiFetch } from '../../apiClient';
 import { RequireAuth, useAuth } from '../../auth';
 import { fetchComplianceReport, listDriverSummaries } from '../../adminApi';
 import { FullScreenMessage } from '../../components/console';
 import { Logo } from '../../components/Logo';
-import { TelemetryPanel } from '../../components/Telemetry';
 import { useNoIndex } from '../../seo';
 import { AccountPanel } from '../account/AccountPage';
+import { AdminAnalytics } from './AdminAnalytics';
 import { AdminAudit } from './AdminAudit';
 import { AdminBookings } from './AdminBookings';
 import { AdminCompliance } from './AdminCompliance';
@@ -43,7 +43,8 @@ export function AdminApp() {
           <Route path="compliance" element={<AdminCompliance />} />
           <Route path="team" element={<AdminTeam />} />
           <Route path="audit" element={<AdminAudit />} />
-          <Route path="telemetry" element={<TelemetryPanel />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="telemetry" element={<Navigate to="/admin/analytics" replace />} />
           <Route path="account" element={<AccountPanel />} />
           <Route
             path="*"
@@ -83,11 +84,11 @@ function AdminLayout({ children }: { children: ReactNode }) {
 
   const nav = [
     { to: '/admin', label: 'Bookings', end: true, badge: 0 },
+    { to: '/admin/analytics', label: 'Analytics', end: false, badge: 0 },
     { to: '/admin/drivers', label: 'Drivers', end: false, badge: counts.review },
     { to: '/admin/compliance', label: 'Compliance', end: false, badge: counts.compliance },
     { to: '/admin/team', label: 'Team', end: false, badge: 0 },
     { to: '/admin/audit', label: 'Audit log', end: false, badge: 0 },
-    { to: '/admin/telemetry', label: 'Telemetry', end: false, badge: 0 },
   ];
 
   return (

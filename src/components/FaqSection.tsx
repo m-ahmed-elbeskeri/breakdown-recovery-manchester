@@ -2,6 +2,7 @@ import { HelpCircle, ChevronDown, PhoneCall } from '../icons';
 import { PHONE_TEL, PHONE_DISPLAY } from '../config';
 import { buildFaqItems, type FaqItem } from '../data';
 import { Reveal } from './motion';
+import { track } from '../telemetry';
 
 export function FaqSection({
   regionName,
@@ -40,7 +41,12 @@ export function FaqSection({
         <div className="space-y-3">
           {list.map((item, i) => (
             <Reveal key={item.q} delay={Math.min(i * 0.06, 0.3)}>
-              <details className="group bg-slate-50 border-2 border-slate-200 hover:border-yellow-400 transition-colors">
+              <details
+                className="group bg-slate-50 border-2 border-slate-200 hover:border-yellow-400 transition-colors"
+                onToggle={(e) => {
+                  if (e.currentTarget.open) track('faq_opened', { q: item.q.slice(0, 40), index: i });
+                }}
+              >
                 <summary className="flex items-center justify-between gap-4 p-5 cursor-pointer list-none font-sans font-bold text-base md:text-lg tracking-tight text-slate-950">
                   <span className="flex items-start gap-3">
                     <HelpCircle

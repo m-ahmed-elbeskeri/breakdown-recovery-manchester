@@ -43,7 +43,14 @@ driver positions and customer tracking.
 - **Admin** at `/admin`: bookings with assign and cancel; driver review with a
   document viewer, approve or send back, a DVLA licence check record, and
   approve, reject, suspend or reinstate; a compliance page of expiring
-  documents; office accounts; an audit log; anonymous funnel telemetry.
+  documents; office accounts; an audit log.
+- **Analytics** at `/admin/analytics`: visits compared with the previous
+  period, traffic sources and advert campaigns (tag advert links with
+  `utm_source` and `utm_campaign`), pages and landing pages with time on page
+  and scroll depth, the booking and driver-recruitment funnels, calls and
+  clicks, site speed, page errors, and who is on the site right now. No
+  cookies, no IP addresses, nothing anyone types, and never the signed-in
+  staff or driver pages.
 - **Prerendered.** Every public page is built to static HTML at build time
   (`scripts/prerender.mjs`) so search engines and link previews get the whole
   page, not an empty `<div id="root">`. React hydrates on load.
