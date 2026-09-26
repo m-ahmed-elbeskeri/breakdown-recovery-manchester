@@ -59,13 +59,13 @@ export function LoginPage() {
         <>
           <p>
             Want to drive with us?{' '}
-            <Link to="/drivers/apply" className="text-yellow-400 underline font-bold">
+            <Link to="/drivers/apply" className="text-accent-400 underline font-bold">
               Apply here
             </Link>
           </p>
           <p>
             Broken down?{' '}
-            <Link to="/" className="text-yellow-400 underline font-bold">
+            <Link to="/" className="text-accent-400 underline font-bold">
               Book recovery
             </Link>
           </p>

@@ -47,98 +47,66 @@ match `src/config.ts`.
 
 ## 2. Colour
 
-Three roles, and only three. If a colour you want doesn't have a role, it
-doesn't go in.
+Three colours, each with one job. If a colour you want doesn't have a job, it
+doesn't go in. This is the usual shape of a disciplined brand palette: a
+neutral that does most of the work, one dark, and one accent for action,
+split roughly 60 / 30 / 10.
 
-| Role       | Meaning                                                   |
-| ---------- | --------------------------------------------------------- |
-| **Navy**   | Trust. Accents, links, structure, big reassurance panels. |
-| **Yellow** | Action. Buttons, and only things meant to be tapped.      |
-| **Ink**    | One neutral ramp for text, surfaces and borders.          |
+| Colour     | Share | Job                                                            |
+| ---------- | ----- | -------------------------------------------------------------- |
+| **White**  | ~60%  | Page and card surfaces, including the booking panel.           |
+| **Ink**    | ~30%  | Text, figures and small labels; the thin top bar, the dispatch |
+|            |       | tape, the closing call to action and the footer.               |
+| **Yellow** | ~10%  | The accent (`accent-*`). Buttons with ink text, the headline   |
+|            |       | mark, number chips, rules, and figures on ink.                 |
 
-### Why navy carries the trust
+Plus two semantic colours that are not part of the brand and only appear when
+they mean something: **red** (`--color-danger`) for errors, **green**
+(`--color-success`) for success.
 
-Every UK breakdown and emergency service reaches for blue — AA, RAC, police,
-NHS. It reads calm, institutional, competent. That is exactly the feeling
-someone stranded needs.
+### Rules
 
-### Why yellow is never a background
-
-Hi-vis yellow at page scale is the colour language of _hazard_, not _help_. It
-raises arousal in a reader who is already frightened, and it's the
-cheapest-feeling colour in UK service branding. As a small action colour it's
-outstanding: it grabs the eye and it's unmissable on a dark panel. So it's
-confined to buttons, badges and rules.
-
-There is also **no true red** in the palette. Red is the universal error colour;
-a page peppered with red accents hums with low-level alarm. It's reserved for
-validation failures alone.
+- **Yellow is never text on white.** It fails contrast. Small accent text on
+  white (eyebrows, links, ticks) is ink.
+- **Yellow is never a large background.** At page scale hi-vis yellow reads as
+  hazard and raises the pulse of someone already frightened.
+- **Light by default.** Dark is for the thin bars, one closing band and the
+  footer. A page of dark panels reads as "dark mode", not daylight help.
+- **No navy, no second accent.** Navy was tried as a trust colour and dropped;
+  teal and blue were tried as replacements for yellow and rejected.
 
 ### Ink
 
+A near-neutral cool grey. `slate-*` and `neutral-*` resolve to the same ramp
+on purpose.
+
 | Token               | Hex       | Use                                   |
 | ------------------- | --------- | ------------------------------------- |
-| `slate/neutral-50`  | `#f5f7fa` | Page background, alternating sections |
-| `slate/neutral-100` | `#eaeef3` | Subtle fills                          |
-| `slate/neutral-200` | `#d8dfe8` | Borders, rules                        |
-| `slate/neutral-300` | `#bac5d2` | Disabled text, dividers               |
-| `slate/neutral-400` | `#8f9dae` | Muted text on dark panels             |
-| `slate/neutral-500` | `#6d7c8e` | Secondary text on light               |
-| `slate/neutral-600` | `#52606f` | Body text on light                    |
-| `slate/neutral-700` | `#3b4753` | Strong body text                      |
-| `slate/neutral-800` | `#26303b` | Dark panel surfaces                   |
-| `slate/neutral-900` | `#18202a` | Darker panel surfaces                 |
-| `slate/neutral-950` | `#0e151d` | Primary dark panel, headings on light |
+| `slate/neutral-50`  | `#f7f8fa` | Page background, alternating sections |
+| `slate/neutral-100` | `#eef0f3` | Subtle fills                          |
+| `slate/neutral-200` | `#dde1e7` | Borders, rules                        |
+| `slate/neutral-300` | `#c3c9d2` | Disabled text, dividers               |
+| `slate/neutral-400` | `#959eab` | Muted text on dark                    |
+| `slate/neutral-500` | `#6f7885` | Secondary text on light               |
+| `slate/neutral-600` | `#545c68` | Body text on light                    |
+| `slate/neutral-700` | `#3e4550` | Strong body text                      |
+| `slate/neutral-800` | `#292e36` | Borders and fields on dark            |
+| `slate/neutral-900` | `#1b1f25` | Raised surfaces on dark               |
+| `slate/neutral-950` | `#111418` | The dark, and headings on light       |
 
-**`slate-*` and `neutral-*` resolve to the same ramp on purpose.** Every
-neutral here is mixed toward navy (hue ≈ 213), so a light section and a dark
-panel are visibly the same family.
+### Yellow (`accent-*`)
 
-### Navy
+| Token        | Hex       | Use                                        |
+| ------------ | --------- | ------------------------------------------ |
+| `accent-50`  | `#fffbeb` | Tint behind notices in the booking panel   |
+| `accent-200` | `#fde68a` | Tint borders                               |
+| `accent-300` | `#ffd94f` | Button hover                               |
+| `accent-400` | `#f5c518` | **The action colour** (always ink text)    |
+| `accent-500` | `#d9a800` | Rules on light                             |
+| `accent-700` | `#7a5c00` | Dark gold chips with white text (consoles) |
 
-| Token      | Hex       | Use                                    |
-| ---------- | --------- | -------------------------------------- |
-| `navy-50`  | `#eef4fb` | Tint background                        |
-| `navy-100` | `#d8e6f5` | Body text on navy panels               |
-| `navy-200` | `#b3cdea` | Muted text on navy                     |
-| `navy-300` | `#85aeda` | Secondary text on navy                 |
-| `navy-400` | `#5288c2` | Decorative                             |
-| `navy-500` | `#2f68a6` | Decorative                             |
-| `navy-600` | `#245488` | Hover on navy accents                  |
-| `navy-700` | `#1b4069` | **Accent text on light** (10.7:1)      |
-| `navy-800` | `#143050` | Card surfaces on navy                  |
-| `navy-900` | `#0d2038` | **Reassurance panels** (CTA, coverage) |
-| `navy-950` | `#081525` | Deepest surface                        |
-
-### Yellow
-
-| Token        | Hex       | Use                           |
-| ------------ | --------- | ----------------------------- |
-| `yellow-300` | `#ffd94f` | Button hover                  |
-| `yellow-400` | `#f5c518` | **The action colour**         |
-| `yellow-500` | `#d9a800` | Pressed, or on light surfaces |
-
-Text on yellow is always `neutral-950`. Never white — it fails contrast.
-
-### Semantic
-
-| Token                 | Hex       | Use                        |
-| --------------------- | --------- | -------------------------- |
-| `--color-danger`      | `#c0392b` | Validation errors, light   |
-| `--color-danger-soft` | `#ff8a7a` | Validation errors, on dark |
-| `--color-success`     | `#1f7a4d` | Confirmations              |
-
-### Legacy remaps
-
-The markup still carries `red-*` and `blue-*` class names from the original
-build. Rather than rewrite hundreds of class names, those scales resolve into
-the system in `index.css`:
-
-- `red-600` / `red-700` → navy (accent text on light)
-- `red-400` / `red-500` → yellow (accent text on dark panels)
-- `blue-50` / `blue-100` → navy tints
-
-New work should use `navy-*`, `yellow-*` and `slate-*` directly.
+`red-*` and `blue-*` classes are legacy aliases kept for the staff consoles;
+they resolve into this palette. Don't write new ones.
 
 ---
 
@@ -184,6 +152,10 @@ Everything else. Neutral, highly legible at small sizes, excellent in forms.
 | `shadow-lg` / `shadow-xl`       | Cards, panels |
 
 Corners stay square (`rounded-none`) — that's the industrial edge worth keeping.
+Softness comes from elevation and spacing, not radius.
+
+No blinking dots or pulsing lights on status badges. To someone already
+stressed they read as an alarm, not as "live".
 
 ---
 
@@ -220,7 +192,7 @@ Warm, plain, British. We are the people who turn up.
   drivers on duty, and quotes the measured response time once enough jobs have
   been timed (`backend/app/main.py`). A reader who catches one invented number
   stops believing the response time too.
-- **Price before commitment.** The "From £55" line is derived from `FROM_PRICE`
+- **Price before commitment.** The "From £40" line is derived from `FROM_PRICE`
   in `src/pricing.ts` so it can never drift from the real tariff, and the prices
   page shows the whole tariff.
 

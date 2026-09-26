@@ -54,6 +54,14 @@ export function PrivacyPolicy() {
           phone number for the same job. Neither of you is tracked outside the job.
         </p>
 
+        <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">Paying by card</h2>
+        <p className="text-slate-700">
+          Card payments are processed by Stripe. Your card details go from your browser straight to
+          Stripe; we never see or store your card number. We keep a record of what was held, taken
+          and refunded for each booking. Drivers are paid through Stripe too, and Stripe collects
+          the identity and bank details it needs to pay them under its own privacy policy.
+        </p>
+
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">
           If you drive for us
         </h2>
@@ -83,14 +91,14 @@ export function PrivacyPolicy() {
 
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">Site analytics</h2>
         <p className="text-slate-700">
-          We measure how the site is used so we can improve it: which pages are visited and for
-          how long, how far down a page people scroll, which buttons, links and questions are
-          pressed, where people give up in the booking form, how quickly pages load, whether
-          anything breaks, and which website or advert brought the visit. This uses a random
-          identifier that lives only in your browser tab and is discarded when it closes. We use
-          no cookies and record no IP addresses. We never record anything you type, your phone
-          number or your location, and we never measure the pages drivers and staff use after
-          signing in. These records are deleted after 13 months.
+          We measure how the site is used so we can improve it: which pages are visited and for how
+          long, how far down a page people scroll, which buttons, links and questions are pressed,
+          where people give up in the booking form, how quickly pages load, whether anything breaks,
+          and which website or advert brought the visit. This uses a random identifier that lives
+          only in your browser tab and is discarded when it closes. We use no cookies and record no
+          IP addresses. We never record anything you type, your phone number or your location, and
+          we never measure the pages drivers and staff use after signing in. These records are
+          deleted after 13 months.
         </p>
 
         <h2 className="font-sans font-extrabold text-xl tracking-tight mt-8">

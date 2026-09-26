@@ -12,6 +12,7 @@ import { CopyButton, ErrorNotice } from '../../components/console';
 import { trackPath } from '../../config';
 import { serviceLabel } from '../../data';
 import { whenLabel, type Job } from '../../driver';
+import { PAYMENT_STATUS_LABEL } from '../../payments';
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString('en-GB', {
@@ -70,7 +71,7 @@ export function AdminBookings() {
         <button
           type="button"
           onClick={() => void load()}
-          className="text-xs font-bold uppercase tracking-wider text-neutral-950 bg-yellow-400 hover:bg-yellow-300 px-4 py-2 inline-flex items-center gap-2"
+          className="text-xs font-bold uppercase tracking-wider text-neutral-950 bg-accent-400 hover:bg-accent-300 px-4 py-2 inline-flex items-center gap-2"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
           Refresh
@@ -127,7 +128,7 @@ export function AdminBookings() {
                       {b.phone ? (
                         <a
                           href={`tel:${b.phone.replace(/[^\d+]/g, '')}`}
-                          className="text-yellow-400 hover:text-yellow-300 inline-flex items-center gap-1.5 whitespace-nowrap"
+                          className="text-accent-400 hover:text-accent-300 inline-flex items-center gap-1.5 whitespace-nowrap"
                         >
                           <Phone className="w-3.5 h-3.5" /> {b.phone}
                         </a>
@@ -135,8 +136,13 @@ export function AdminBookings() {
                         '–'
                       )}
                     </td>
-                    <td className="p-3 font-display text-yellow-400 tabular-nums">
+                    <td className="p-3 font-display text-accent-400 tabular-nums">
                       {b.price != null ? `£${b.price}` : '–'}
+                      {(b.paymentMethod === 'card' || b.paymentStatus !== 'none') && (
+                        <span className="block font-sans text-[10px] font-bold uppercase tracking-wider text-neutral-500 mt-1 whitespace-nowrap">
+                          {PAYMENT_STATUS_LABEL[b.paymentStatus] ?? b.paymentStatus}
+                        </span>
+                      )}
                     </td>
                     <td className="p-3 text-neutral-400 whitespace-nowrap">{whenLabel(b)}</td>
                     <td className="p-3 text-neutral-300 whitespace-nowrap">
@@ -154,14 +160,14 @@ export function AdminBookings() {
                       </span>
                       {b.rating !== null && (
                         <span
-                          className="mt-1.5 flex items-center gap-0.5 text-yellow-400"
+                          className="mt-1.5 flex items-center gap-0.5 text-accent-400"
                           aria-label={`Rated ${b.rating} out of 5`}
                           title={b.ratingComment ?? undefined}
                         >
                           {[1, 2, 3, 4, 5].map((n) => (
                             <Star
                               key={n}
-                              className={`w-3 h-3 ${n <= (b.rating ?? 0) ? 'fill-yellow-400' : 'opacity-30'}`}
+                              className={`w-3 h-3 ${n <= (b.rating ?? 0) ? 'fill-accent-400' : 'opacity-30'}`}
                             />
                           ))}
                         </span>
@@ -174,7 +180,7 @@ export function AdminBookings() {
                             href={trackPath(b.trackToken)}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-yellow-400 hover:text-yellow-300 underline text-xs"
+                            className="text-accent-400 hover:text-accent-300 underline text-xs"
                           >
                             Open
                           </a>
@@ -253,7 +259,7 @@ function BookingActions({
             type="button"
             disabled={!driverId || busy}
             onClick={() => void run(() => assignJob(job.id, 'accepted', Number(driverId)))}
-            className="px-2.5 bg-yellow-400 text-neutral-950 text-[11px] font-black uppercase disabled:opacity-40"
+            className="px-2.5 bg-accent-400 text-neutral-950 text-[11px] font-black uppercase disabled:opacity-40"
           >
             Assign
           </button>

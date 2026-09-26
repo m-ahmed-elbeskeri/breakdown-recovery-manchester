@@ -74,7 +74,7 @@ export function DriverApplyPage() {
       footer={
         <p>
           Already applied?{' '}
-          <Link to="/login" className="text-yellow-400 underline font-bold">
+          <Link to="/login" className="text-accent-400 underline font-bold">
             Sign in
           </Link>
         </p>
@@ -125,12 +125,12 @@ export function DriverApplyPage() {
               type="checkbox"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
-              className="mt-0.5 w-5 h-5 accent-yellow-400 shrink-0"
+              className="mt-0.5 w-5 h-5 accent-accent-400 shrink-0"
             />
             <span>
               I agree to my details and documents being used to check I can drive for you, as set
               out in the{' '}
-              <Link to="/privacy" className="text-yellow-400 underline" target="_blank">
+              <Link to="/privacy" className="text-accent-400 underline" target="_blank">
                 privacy policy
               </Link>
               .

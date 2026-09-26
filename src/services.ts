@@ -35,11 +35,11 @@ export interface ServicePage {
   description: string;
   /** Small line above the headline. */
   eyebrow: string;
-  /** The h1 in two lines; the second is set on the yellow block. */
+  /** The h1 in two lines; the second is set on the accent block. */
   headline: [string, string];
   /** One paragraph under the headline. */
   intro: string;
-  /** "From £55", derived from the tariff. */
+  /** "From £40", derived from the tariff. */
   fromPrice: number;
   /** How the price is made up, in one sentence. */
   priceNote: string;
@@ -160,7 +160,7 @@ export const SERVICE_PAGES: ServicePage[] = [
     slug: 'jump-start-near-me',
     service: 'jumpstart',
     name: 'Jump start',
-    title: 'Jump Start Near Me | Flat Battery Manchester, £55 Callout',
+    title: `Jump Start Near Me | Flat Battery Manchester, £${ROADSIDE_FEES.jumpstart} Callout`,
     description: `Flat battery in Greater Manchester? Mobile jump start for a flat £${ROADSIDE_FEES.jumpstart}, 24/7, with a live ETA and driver tracking. Call ${PHONE_DISPLAY} or book online in a minute.`,
     eyebrow: 'Flat battery?',
     headline: ['JUMP START', 'NEAR ME.'],
@@ -185,7 +185,7 @@ export const SERVICE_PAGES: ServicePage[] = [
     faq: [
       {
         q: 'How much does a jump start cost in Manchester?',
-        a: `£${ROADSIDE_FEES.jumpstart}, flat, day or night (nights add ${night}%). That is at the lower end of what local operators charge, and there is nothing added afterwards.`,
+        a: `£${ROADSIDE_FEES.jumpstart}, flat, day or night (nights add ${night}%). Local operators quote £55 to £80 for the same callout, so it is the cheapest jump start in Greater Manchester, and there is nothing added afterwards.`,
       },
       {
         q: 'How quickly can you get to me?',

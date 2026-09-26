@@ -90,7 +90,7 @@ export function InstallApp() {
           type="button"
           onClick={ios ? () => setShowIosSteps((v) => !v) : install}
           aria-expanded={ios ? showIosSteps : undefined}
-          className="shrink-0 bg-yellow-400 text-neutral-950 font-display px-4 py-2.5 uppercase tracking-wider text-xs"
+          className="shrink-0 bg-accent-400 text-neutral-950 font-display px-4 py-2.5 uppercase tracking-wider text-xs"
         >
           {ios ? 'How' : 'Install'}
         </button>
@@ -102,7 +102,7 @@ export function InstallApp() {
             Tap the Share button
             <span
               aria-hidden="true"
-              className="inline-flex items-center justify-center mx-1.5 w-5 h-5 align-text-bottom border border-neutral-600 text-yellow-400"
+              className="inline-flex items-center justify-center mx-1.5 w-5 h-5 align-text-bottom border border-neutral-600 text-accent-400"
             >
               ↑
             </span>

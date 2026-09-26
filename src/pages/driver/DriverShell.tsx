@@ -10,6 +10,7 @@ export function DriverShell({ title, children }: { title?: string; children: Rea
   const nav = working
     ? [
         { to: '/driver', label: 'Jobs', end: true },
+        { to: '/driver/earnings', label: 'Earnings', end: false },
         { to: '/driver/documents', label: 'Documents', end: false },
         { to: '/driver/account', label: 'Account', end: false },
       ]
@@ -36,7 +37,7 @@ export function DriverShell({ title, children }: { title?: string; children: Rea
               className={({ isActive }) =>
                 `px-3.5 py-2.5 text-[12px] font-black uppercase tracking-wider border-b-4 ${
                   isActive
-                    ? 'border-yellow-400 text-white'
+                    ? 'border-accent-400 text-white'
                     : 'border-transparent text-neutral-500 hover:text-white'
                 }`
               }

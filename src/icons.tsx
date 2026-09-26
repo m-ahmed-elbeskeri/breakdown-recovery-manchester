@@ -45,6 +45,7 @@ import {
   Check as I_Check,
   MapPin as I_PinMark,
   Bell as I_Bell,
+  Lock as I_Lock,
 } from 'iconoir-react';
 import type { ComponentType, SVGProps } from 'react';
 
@@ -108,3 +109,5 @@ export const Copy = bold(I_Copy);
 export const Check = bold(I_Check);
 export const Pin = bold(I_PinMark);
 export const Bell = bold(I_Bell);
+/** The padlock everyone already reads as "this connection is secure". */
+export const Lock = bold(I_Lock);

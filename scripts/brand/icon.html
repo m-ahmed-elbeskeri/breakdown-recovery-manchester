@@ -4,8 +4,8 @@
   Chrome. Query string picks the variant and size:
 
     ?variant=any&size=192       transparent background, pin fills the tile
-    ?variant=maskable&size=512  navy tile, pin kept inside the 80% safe zone
-    ?variant=apple&size=180     navy tile, slightly larger pin (iOS rounds the corners)
+    ?variant=maskable&size=512  ink tile, pin kept inside the 80% safe zone
+    ?variant=apple&size=180     ink tile, slightly larger pin (iOS rounds the corners)
 
   The tile is anchored to the page's top-left corner at exactly `size` pixels.
   Headless Chrome will not lay out a viewport narrower than a few hundred
@@ -33,7 +33,7 @@
       }
       .tile.maskable,
       .tile.apple {
-        background: #0d2038;
+        background: #111418;
       }
       .tile svg {
         width: 100%;
@@ -56,15 +56,15 @@
         <path
           d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z"
           fill="#f5c518"
-          stroke="#0e151d"
+          stroke="#111418"
           stroke-width="3"
           stroke-linejoin="round"
         />
-        <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#0e151d" stroke-width="2.6" />
+        <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#111418" stroke-width="2.6" />
         <path
           d="M26.5 12.8 V19.5 C26.5 25 19 25.5 19 21"
           fill="none"
-          stroke="#0e151d"
+          stroke="#111418"
           stroke-width="3"
           stroke-linecap="round"
           stroke-linejoin="round"

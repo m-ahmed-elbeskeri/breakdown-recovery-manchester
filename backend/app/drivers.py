@@ -298,7 +298,13 @@ def my_job_status(
     if booking is None:
         raise HTTPException(status_code=404, detail="Job not found")
     dispatch.set_job_status(
-        db, booking, payload.status, driver=ctx.driver, actor=ctx.user, by_admin=False
+        db,
+        booking,
+        payload.status,
+        driver=ctx.driver,
+        actor=ctx.user,
+        by_admin=False,
+        paid_in_person=payload.paidInPerson,
     )
     db.commit()
     db.refresh(booking)

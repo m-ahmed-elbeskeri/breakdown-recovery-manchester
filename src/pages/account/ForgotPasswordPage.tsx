@@ -39,7 +39,7 @@ export function ForgotPasswordPage() {
       title="Forgotten password"
       intro="We'll email you a link to choose a new one."
       footer={
-        <Link to="/login" className="text-yellow-400 underline font-bold">
+        <Link to="/login" className="text-accent-400 underline font-bold">
           Back to sign in
         </Link>
       }

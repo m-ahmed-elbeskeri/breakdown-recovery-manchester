@@ -88,13 +88,13 @@ def tel_uri(phone: str) -> str:
 def _link(label: str, href: str) -> str:
     return (
         f'<a href="{escape(href, quote=True)}" '
-        'style="color:#1b4069;font-weight:600;text-decoration:underline">'
+        'style="color:#d9a800;font-weight:600;text-decoration:underline">'
         f"{escape(label)}</a>"
     )
 
 
 def _button(label: str, href: str, dark: bool = False) -> str:
-    colours = "background:#0e151d;color:#ffffff" if dark else "background:#f5c518;color:#0e151d"
+    colours = "background:#111418;color:#ffffff" if dark else "background:#f5c518;color:#111418"
     return (
         f'<a href="{escape(href, quote=True)}" style="display:inline-block;{colours};'
         "font-weight:700;text-decoration:none;padding:12px 20px;margin:0 8px 8px 0;"

@@ -131,6 +131,65 @@ Then verify:
   driver, show their photo and registration, and, once "On my way" is tapped,
   show the truck on the map.
 
+## Card payments and driver payouts (Stripe Connect)
+
+How the money works:
+
+- **Card jobs.** The customer's card is held when they book and only charged
+  when the driver marks the job done. The platform keeps its cut
+  (`PLATFORM_FEE_PERCENT`, default 20) and sends the driver the rest. The card
+  is also saved, so a job booked more than a week ahead can still be charged
+  after the hold runs out. Cancelling before the job is done releases the hold.
+- **Cash jobs.** The customer pays the platform's cut as a **deposit** on
+  their card (held at booking, taken when the job is done, released if they
+  cancel) and pays the rest to the driver in cash. Nothing is then owed either
+  way. The driver app shows exactly how much cash to collect. If the customer
+  never pays the deposit, the driver collects the full price and the cut is
+  recorded against the driver: it comes off their next card job, or the
+  office records it under **Admin → Payments** when the driver pays directly.
+- **Payouts.** Drivers set up payouts on Stripe's own pages from
+  **Earnings** in the driver app. Stripe checks their ID and bank account. The
+  money waits in their Stripe balance until they cash out: a standard payout
+  is free and takes two to three working days, and an instant one costs
+  Stripe's 1% (at least 50p), which is taken from the driver's next earnings.
+
+Until the keys below are set, card payment is simply not offered, and every
+booking is paid to the driver as before.
+
+1. **You** create the Stripe account at https://dashboard.stripe.com, as the
+   business, with the bank account the platform's cut is paid into.
+2. **Connect → Get started**: choose a marketplace, with **Express**
+   connected accounts in the United Kingdom. Under Connect settings, add the
+   platform's name, icon and colour, which drivers see during setup.
+3. **Settings → Payouts → Instant Payouts**: switch them on for connected
+   accounts.
+4. **Developers → API keys**: copy the publishable and secret keys. Start in
+   test mode (`pk_test_…`, `sk_test_…`).
+5. **Developers → Webhooks**, two endpoints, both pointing at
+   `https://breakdown-recovery-api-dxja.onrender.com/api/payments/webhook`:
+   - Events on **your account**: `payment_intent.amount_capturable_updated`,
+     `payment_intent.succeeded`, `payment_intent.payment_failed`,
+     `payment_intent.canceled`, `charge.refunded`. Copy its signing secret.
+   - Events on **connected accounts**: `account.updated`. Copy its signing
+     secret.
+6. On Render, add to the API's environment and save, which redeploys:
+   ```
+   STRIPE_SECRET_KEY              = sk_test_…
+   STRIPE_PUBLISHABLE_KEY         = pk_test_…
+   STRIPE_WEBHOOK_SECRET          = whsec_… (your account's endpoint)
+   STRIPE_CONNECT_WEBHOOK_SECRET  = whsec_… (connected accounts' endpoint)
+   PLATFORM_FEE_PERCENT           = 20
+   ```
+   The site reads these from the API, so it needs no rebuild.
+7. **Settings → Payment method domains**: add `recovery-mayte.pages.dev`
+   (and `carrecoverynearme.uk` once it's live) so Apple Pay appears.
+8. Test end to end in test mode: book with card `4242 4242 4242 4242`, set up
+   a driver's payouts with Stripe's test identity details, take and finish the
+   job, and check **Admin → Payments**. Then swap in the live keys and the live
+   webhook secrets.
+9. Before taking real money, publish customer and driver terms that state the
+   platform's cut, when a card is charged, and the cancellation rules.
+
 ## Email alerts (optional)
 
 1. Sign up at **https://resend.com** (free tier).

@@ -46,14 +46,20 @@ export const FREE_DEADHEAD_MILES = 8;
  * Flat attendance fees for jobs fixed at the roadside (no tow distance).
  *
  * Benchmarked against Manchester operators in 2026: mobile tyre fitting is
- * quoted locally at £90-£120 and fuel delivery from £69, so the old £55 and £40
- * were not "competitive" but roughly 40% under what customers already expect —
- * cheap enough to read as amateur. All three now sit inside the local range
- * rather than beneath it, in its lower half — still the value option in
- * Manchester, without pricing the work below what it costs to turn up.
+ * quoted locally at £90-£120 and fuel delivery from £69, so tyre and fuel sit
+ * inside the local range rather than beneath it — the value option, without
+ * pricing the work below what it costs to turn up.
+ *
+ * The jump start is the deliberate exception. It is the shortest job the
+ * business does (a booster pack and ten minutes), it is the one people most
+ * often ring round for, and it is the number that sets the "from £X" on every
+ * page. Priced at £40 it undercuts the local band outright, which is the point:
+ * the entry price is what a frightened reader anchors the whole tariff to
+ * before they will type a postcode. The margin lost on a jump start buys the
+ * tow quote a hearing.
  */
 export const ROADSIDE_FEES: Record<string, number> = {
-  jumpstart: 55,
+  jumpstart: 40,
   tyre: 95,
   fuel: 69,
 };

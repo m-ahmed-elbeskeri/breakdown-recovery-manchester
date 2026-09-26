@@ -20,12 +20,14 @@ import {
   Car,
   Copy,
   Check,
+  Lock,
 } from '../icons';
 import { PHONE_TEL, PHONE_DISPLAY, SITE_URL, trackPath } from '../config';
 import { SERVICE_OPTIONS, serviceNeedsDestination } from '../data';
 import { CountUp } from './motion';
 import { useMetrics } from '../metrics';
 import { useSubmitBooking } from '../useBackend';
+import { cashSplit, formatPounds, usePaymentsConfig } from '../payments';
 import { validateQuote, VEHICLE_MAX_LENGTH, type QuoteData } from '../validation';
 import {
   detectMotorway,
@@ -66,6 +68,9 @@ const formatScheduledFor = (d: Date | null): string =>
       })
     : '';
 
+/** Risk reversal, placed on the button that carries the risk. */
+const SUBMIT_REASSURANCES = ['Nothing taken now', 'Free to cancel', 'Price locked'] as const;
+
 /** How often to re-ask what the wait is, so availability stays current. */
 const ETA_POLL_MS = 15_000;
 /**
@@ -81,6 +86,50 @@ const GEO_OPTIONS: PositionOptions = {
   maximumAge: 60_000,
 };
 
+/**
+ * What the app is actually doing while the price is worked out, said out loud.
+ *
+ * The work is real — the pickup is geocoded, a driving route is fetched for
+ * the exact addresses, and the tariff is applied to the miles that come back —
+ * and naming it is the difference between a number that looks quoted and a
+ * number that looks calculated. A bare spinner gets read as a page deciding
+ * what it can get away with charging.
+ */
+const CALC_STEPS = [
+  'Finding your pickup',
+  'Measuring the driving route',
+  'Working out your price',
+] as const;
+
+const CALC_STEP_MS = 800;
+
+function CalculatingPrice() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    // Stops on the last line rather than looping: a list that starts over
+    // says the work restarted, which is the opposite of the reassurance.
+    if (i >= CALC_STEPS.length - 1) return;
+    const t = setTimeout(() => setI((n) => n + 1), CALC_STEP_MS);
+    return () => clearTimeout(t);
+  }, [i]);
+  return (
+    <div className="w-full flex flex-col items-center gap-2" aria-busy="true">
+      <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold uppercase tracking-wider">
+        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+        <span>{CALC_STEPS[i]}…</span>
+      </div>
+      <div className="flex gap-1.5" aria-hidden="true">
+        {CALC_STEPS.map((step, n) => (
+          <span
+            key={step}
+            className={`h-1 w-6 transition-colors ${n <= i ? 'bg-accent-400' : 'bg-slate-100'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The "voila" — a single confident price that pops in and counts up. */
 function PriceReveal({
   price,
@@ -91,31 +140,45 @@ function PriceReveal({
   estimate: JourneyEstimate | null;
   night: boolean;
 }) {
+  const towing = Boolean(estimate && estimate.loadedMiles > 0);
   return (
     <motion.div
       key={price}
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 320, damping: 17 }}
-      className="flex items-center justify-between gap-3"
+      className="w-full flex flex-col gap-2.5"
     >
-      <div>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-red-500 font-black">
-          Your price{night ? ' · night rate' : ''}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-950 font-black">
+            Your price{night ? ' · night rate' : ''}
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+            {towing && estimate ? (
+              <>
+                {estimate.loadedMiles} mi · ~{estimate.loadedMinutes} min tow
+              </>
+            ) : (
+              <>Roadside fix · no tow needed</>
+            )}
+          </div>
         </div>
-        <div className="text-[11px] text-neutral-400 font-medium mt-0.5">
-          {estimate && estimate.loadedMiles > 0 ? (
-            <>
-              {estimate.loadedMiles} mi · ~{estimate.loadedMinutes} min tow
-            </>
-          ) : (
-            <>Roadside fix · no tow needed</>
-          )}
+        <div className="font-display text-4xl sm:text-5xl text-slate-950 leading-none flex items-baseline">
+          £<CountUp value={price} />
         </div>
       </div>
-      <div className="font-display text-4xl sm:text-5xl text-yellow-400 leading-none flex items-baseline">
-        £<CountUp value={price} />
-      </div>
+      {/* A big number with nothing behind it invites the reader to argue with
+          it. Saying what is inside it, and that this is the figure the driver
+          is sent, turns the same number from a demand into a total. */}
+      <p className="text-[11px] text-slate-500 font-medium leading-relaxed border-t border-slate-200 pt-2">
+        {towing
+          ? 'Callout, loading, straps and every loaded mile.'
+          : 'Callout and the fix at the roadside.'}{' '}
+        <span className="text-slate-700 font-bold">
+          This is the figure your driver is sent. Nothing is added when they arrive.
+        </span>
+      </p>
     </motion.div>
   );
 }
@@ -138,10 +201,10 @@ function ActivityStat() {
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center px-4 py-2.5 sm:py-5">
-      <div className="text-[10px] sm:text-xs text-red-500 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
+      <div className="text-[10px] sm:text-xs text-slate-950 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
         {label}
       </div>
-      <div className="font-display text-2xl sm:text-4xl text-white">{value}</div>
+      <div className="font-display text-2xl sm:text-4xl text-slate-950">{value}</div>
     </div>
   );
 }
@@ -162,7 +225,7 @@ function CopyLink({ url }: { url: string }) {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-white"
+      className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-950"
     >
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
       {copied ? 'Link copied' : 'Copy tracking link'}
@@ -200,6 +263,12 @@ export function BookingForm({
   // Whether the ETA came from a real driver's position. Decides whether the
   // confirmation may claim a dispatch at all.
   const [driverAssigned, setDriverAssigned] = useState(false);
+  // Card through the site (held, taken when the job is done) or pay the
+  // driver. Only offered when card payments are switched on.
+  const paymentsConfig = usePaymentsConfig();
+  const [payWith, setPayWith] = useState<'card' | 'cash'>('card');
+  const [confirmedByCard, setConfirmedByCard] = useState(false);
+  const [confirmedDeposit, setConfirmedDeposit] = useState<number | null>(null);
 
   // Exact coordinates for a place the customer picked from the suggestions.
   // Null whenever they've typed freehand, in which case we fall back to
@@ -503,10 +572,13 @@ export function BookingForm({
         durationMinutes: estimate?.loadedMinutes,
         motorway: motorway !== null,
         price: price ?? undefined,
+        paymentMethod: paymentsConfig?.enabled && price !== null ? payWith : 'cash',
       });
       setConfirmedEta(result.eta);
       setDriverAssigned(result.etaSource === 'driver');
       setConfirmedToken(result.trackToken ?? null);
+      setConfirmedByCard(result.paymentMethod === 'card');
+      setConfirmedDeposit(result.depositPence ?? null);
       track('booking_confirmed', {
         price: price ?? null,
         service: quoteData.service,
@@ -527,7 +599,7 @@ export function BookingForm({
   const errorMessage = submitError && (
     <p
       role="alert"
-      className="text-[var(--color-danger-soft)] text-xs font-bold uppercase tracking-wider text-center pt-1"
+      className="text-[var(--color-danger)] text-xs font-bold uppercase tracking-wider text-center pt-1"
     >
       {submitError}
     </p>
@@ -539,49 +611,76 @@ export function BookingForm({
   const trackingUrl = confirmedToken ? `${origin}${trackPath(confirmedToken)}` : null;
 
   return (
-    <div className="bg-neutral-950 text-white rounded-none relative lg:mt-0 mt-4 shadow-xl">
-      <div className="absolute -top-3 left-5 bg-yellow-400 text-neutral-950 font-black px-3 py-1.5 rounded-none text-[11px] sm:text-xs uppercase tracking-[0.15em] z-20 flex items-center gap-2 border-2 border-neutral-950">
-        <div className="w-1.5 h-1.5 bg-red-600 rounded-none animate-pulse"></div>
+    <div className="bg-white text-slate-950 rounded-none relative lg:mt-0 mt-4 shadow-2xl shadow-slate-950/10 ring-1 ring-slate-200">
+      <div className="absolute -top-3 left-6 bg-accent-400 text-neutral-950 font-black px-3.5 py-1.5 rounded-none text-[11px] sm:text-xs uppercase tracking-[0.15em] z-20 shadow-md">
         {metrics.isLive ? 'Live Dispatch' : '24/7 Dispatch'}
       </div>
 
       {/* Dispatch metrics (live from the backend, or representative figures) */}
-      <div className="grid grid-cols-2 border-b-2 border-yellow-400 pt-6 sm:pt-7">
-        <div className="flex flex-col items-center px-4 py-2.5 sm:py-5 border-r border-neutral-800">
-          <div className="text-[10px] sm:text-xs text-red-500 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
+      <div className="grid grid-cols-2 border-b border-slate-200 pt-6 sm:pt-7">
+        <div className="flex flex-col items-center px-4 py-2.5 sm:py-5 border-r border-slate-200">
+          <div className="text-[10px] sm:text-xs text-slate-950 font-black mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">
             {metrics.measured ? 'Measured Response' : 'Avg Response'}
           </div>
-          <div className="font-display text-2xl sm:text-4xl flex items-baseline gap-1 text-yellow-400">
+          <div className="font-display text-2xl sm:text-4xl flex items-baseline gap-1 text-slate-950">
             <CountUp value={metrics.avgResponseMinutes} />
-            <span className="text-xs sm:text-sm font-bold text-neutral-500">min</span>
+            <span className="text-xs sm:text-sm font-bold text-slate-500">min</span>
           </div>
         </div>
         <ActivityStat />
       </div>
 
       <div className="p-4 sm:p-7 w-full">
-        <h2 className="text-white font-sans font-extrabold text-xl sm:text-3xl tracking-tight mb-2">
-          Get Back On The Road
-        </h2>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h2 className="text-slate-950 font-sans font-extrabold text-xl sm:text-3xl tracking-tight">
+            Get Back On The Road
+          </h2>
+          {/* A price anchor before any details are handed over, set as a figure
+              rather than a sentence. Being asked for your number before you
+              know the cost is what makes people fear a stitch-up at the worst
+              possible moment, and a number buried mid-paragraph is a number
+              nobody scanning one-handed ever reads. Derived from pricing.ts so
+              it can't drift out of date. */}
+          <div className="shrink-0 text-right leading-none">
+            <div className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+              From
+            </div>
+            <div className="font-display text-2xl sm:text-3xl text-slate-950 mt-1">
+              {formatPrice(FROM_PRICE)}
+            </div>
+          </div>
+        </div>
 
-        {/* A price anchor before any details are handed over. Being asked for
-            your number before you know the cost is what makes people fear a
-            stitch-up at the worst possible moment. Derived from pricing.ts so
-            this line can't drift out of date. */}
-        <p className="text-[11px] sm:text-xs text-neutral-400 font-medium mb-3 sm:mb-5 leading-relaxed">
-          From <span className="text-yellow-400 font-bold">{formatPrice(FROM_PRICE)}</span>. You see
-          the full price before you confirm, then track your driver live. No hidden fees.
+        <p className="text-[11px] sm:text-xs text-slate-500 font-medium mb-3 sm:mb-4 leading-relaxed">
+          You see the full price before you confirm, then track your driver live. No hidden fees.
         </p>
 
-        <div
-          className={`relative ${
-            formStep === 2
-              ? 'min-h-[440px]'
-              : formStep === 1 && quoteData.timing === 'later'
-                ? 'min-h-[372px]'
-                : 'min-h-[280px]'
-          }`}
-        >
+        {/* Only on the second screen, and only as a line of text.
+
+            On the first screen it was noise twice over: a progress bar above
+            an empty field tells someone who has not started anything that
+            they have a form to get through, and two segments sitting directly
+            above the Need Help Now / Schedule Later pair read as a second set
+            of tabs. Here it earns its place, because "last step" is the one
+            thing worth knowing at the point where the questions get longer.
+            No bar: a track that can only ever be full carries no information
+            that the words do not. */}
+        {formStep === 2 && (
+          <p className="flex items-baseline justify-between gap-3 mb-4 sm:mb-5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+            <span>
+              Step 2 of 2 <span className="text-slate-950">· Your price</span>
+            </span>
+            <span className="text-slate-950 shrink-0">Last step</span>
+          </p>
+        )}
+
+        {/* The steps are stacked in a single grid cell rather than absolutely
+            positioned inside a reserved minimum height. A reserved height has
+            to be guessed for the tallest thing a step could ever show, which
+            left a hole under the button in the ordinary case and still let a
+            motorway warning plus a live ETA run out of the panel and over the
+            footer. Stacked, the panel is exactly as tall as what it shows. */}
+        <div className="grid grid-cols-1 grid-rows-1">
           {/* `initial={false}`: the first step must render fully visible in
               the prerendered HTML, not sat at opacity 0 waiting for a script. */}
           <AnimatePresence mode="wait" initial={false}>
@@ -592,10 +691,10 @@ export function BookingForm({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.15 }}
-                className="space-y-3.5 absolute inset-0"
+                className="space-y-3.5 [grid-area:1/1]"
               >
                 <div
-                  className="flex bg-neutral-900 p-1 rounded-none border border-neutral-800"
+                  className="flex bg-slate-50 p-1 rounded-none border border-slate-200 gap-1"
                   role="tablist"
                   aria-label="When do you need help?"
                 >
@@ -604,7 +703,7 @@ export function BookingForm({
                     role="tab"
                     aria-selected={quoteData.timing === 'now'}
                     onClick={() => setQuoteData({ ...quoteData, timing: 'now' })}
-                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider transition-all ${quoteData.timing === 'now' ? 'bg-yellow-400 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
+                    className={`flex-1 py-2 rounded-none text-xs font-black uppercase tracking-wider transition-all ${quoteData.timing === 'now' ? 'bg-accent-400 text-neutral-950' : 'text-slate-500 hover:text-slate-950'}`}
                   >
                     Need Help Now
                   </button>
@@ -613,7 +712,7 @@ export function BookingForm({
                     role="tab"
                     aria-selected={quoteData.timing === 'later'}
                     onClick={() => setQuoteData({ ...quoteData, timing: 'later' })}
-                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider transition-all ${quoteData.timing === 'later' ? 'bg-yellow-400 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
+                    className={`flex-1 py-2 rounded-none text-xs font-black uppercase tracking-wider transition-all ${quoteData.timing === 'later' ? 'bg-accent-400 text-neutral-950' : 'text-slate-500 hover:text-slate-950'}`}
                   >
                     Schedule Later
                   </button>
@@ -626,7 +725,7 @@ export function BookingForm({
                   // halfway through and read as broken.
                   <label
                     htmlFor="pickup-location"
-                    className="block text-[11px] font-black uppercase tracking-[0.15em] text-yellow-400"
+                    className="block text-[11px] font-black uppercase tracking-[0.15em] text-slate-950"
                   >
                     Where are we picking up the car from?
                   </label>
@@ -647,13 +746,13 @@ export function BookingForm({
                       : 'Postcode, street or auction'
                   }
                   ariaLabel="Pickup location"
-                  className="w-full pl-11 sm:pl-12 pr-[96px] sm:pr-[110px] py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                  className="w-full pl-11 sm:pl-12 pr-[96px] sm:pr-[110px] py-3.5 rounded-none border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-accent-400 outline-none text-slate-950 font-medium transition-all placeholder:text-slate-400"
                 >
-                  <MapPin className="absolute left-4 w-5 h-5 text-neutral-400 pointer-events-none" />
+                  <MapPin className="absolute left-4 w-5 h-5 text-slate-500 pointer-events-none" />
                   <button
                     type="button"
                     onClick={handleGetLocation}
-                    className="absolute right-1.5 px-2.5 sm:px-3 py-2 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-bold text-xs rounded-none transition-all flex items-center gap-1 sm:gap-1.5 active:scale-95"
+                    className="absolute right-1.5 px-2.5 sm:px-3 py-2 bg-accent-400 hover:bg-accent-300 text-neutral-950 font-bold text-xs rounded-none transition-all flex items-center gap-1 sm:gap-1.5 active:scale-95"
                     title="Use my current location"
                     aria-label="Use my current location"
                   >
@@ -666,13 +765,13 @@ export function BookingForm({
                   </button>
                 </PlaceInput>
                 <div className="relative">
-                  <Phone className="absolute left-4 top-[14px] w-5 h-5 text-neutral-400 pointer-events-none" />
+                  <Phone className="absolute left-4 top-[14px] w-5 h-5 text-slate-500 pointer-events-none" />
                   <input
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel"
                     placeholder="Your Phone Number"
-                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-accent-400 outline-none text-slate-950 font-medium transition-all placeholder:text-slate-400"
                     value={quoteData.phone}
                     onChange={(e) => setQuoteData({ ...quoteData, phone: e.target.value })}
                     // Tidy on the way out, so the customer sees the number read
@@ -683,10 +782,17 @@ export function BookingForm({
                     aria-label="Your phone number"
                   />
                 </div>
+                {/* A reason, given at the field that causes the hesitation. A
+                    phone number asked for with no stated purpose reads as a
+                    sales list; the same number asked for so the driver can ring
+                    from the end of your road does not. */}
+                <p className="text-[11px] text-slate-500 font-medium -mt-1.5 pl-1">
+                  So your driver can ring you when they are close. Nothing else.
+                </p>
                 {quoteData.timing === 'later' && (
                   <div className="relative">
                     <Calendar
-                      className="absolute left-4 top-[14px] w-5 h-5 text-yellow-400 pointer-events-none z-10"
+                      className="absolute left-4 top-[14px] w-5 h-5 text-slate-950 pointer-events-none z-10"
                       aria-hidden="true"
                     />
                     <Flatpickr
@@ -702,7 +808,7 @@ export function BookingForm({
                         position: 'above right',
                         disableMobile: true,
                       }}
-                      className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-yellow-400/40 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400 cursor-pointer"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-accent-200 bg-slate-50 focus:bg-white focus:border-accent-400 outline-none text-slate-950 font-medium transition-all placeholder:text-slate-400 cursor-pointer"
                       placeholder="Pick a date and time"
                       aria-label="When do you need help? Date and time"
                     />
@@ -711,7 +817,7 @@ export function BookingForm({
                 <button
                   type="button"
                   onClick={goToStep2}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider mt-4 shadow-sm hover:shadow-md"
+                  className="w-full bg-accent-400 hover:bg-accent-300 text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider mt-4 shadow-lg shadow-accent-500/20 hover:shadow-xl hover:shadow-accent-500/30 active:scale-[0.99]"
                 >
                   Continue
                   <ArrowRight className="w-5 h-5" />
@@ -727,13 +833,13 @@ export function BookingForm({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.15 }}
-                className="space-y-3.5 absolute inset-0"
+                className="space-y-3.5 [grid-area:1/1]"
               >
                 <div className="relative">
-                  <Wrench className="absolute left-4 top-[14px] w-5 h-5 text-neutral-400 pointer-events-none" />
+                  <Wrench className="absolute left-4 top-[14px] w-5 h-5 text-slate-500 pointer-events-none" />
                   <select
                     ref={serviceRef}
-                    className="w-full pl-12 pr-10 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium appearance-none transition-all"
+                    className="w-full pl-12 pr-10 py-3.5 rounded-none border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-accent-400 outline-none text-slate-950 font-medium appearance-none transition-all"
                     value={quoteData.service}
                     onChange={(e) => chooseService(e.target.value)}
                     aria-label="What do you need help with?"
@@ -747,7 +853,7 @@ export function BookingForm({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-4 top-4 w-5 h-5 text-neutral-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-4 top-4 w-5 h-5 text-slate-500 pointer-events-none" />
                 </div>
                 {needsDestination && (
                   <PlaceInput
@@ -758,9 +864,9 @@ export function BookingForm({
                     }}
                     placeholder="Where do you need to go? (Drop-off)"
                     ariaLabel="Drop-off location"
-                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-accent-400 outline-none text-slate-950 font-medium transition-all placeholder:text-slate-400"
                   >
-                    <Navigation className="absolute left-4 w-5 h-5 text-neutral-400 pointer-events-none" />
+                    <Navigation className="absolute left-4 w-5 h-5 text-slate-500 pointer-events-none" />
                   </PlaceInput>
                 )}
                 {/* Optional, and said to be. A driver looking for "silver
@@ -768,13 +874,13 @@ export function BookingForm({
                     not. But nobody on a hard shoulder is made to find their
                     V5C before help is sent. */}
                 <div className="relative">
-                  <Car className="absolute left-4 top-[14px] w-5 h-5 text-neutral-400 pointer-events-none" />
+                  <Car className="absolute left-4 top-[14px] w-5 h-5 text-slate-500 pointer-events-none" />
                   <input
                     type="text"
                     autoComplete="off"
                     maxLength={VEHICLE_MAX_LENGTH}
                     placeholder="Reg or make & model (optional)"
-                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-neutral-800 bg-neutral-900 focus:bg-black focus:border-yellow-400 outline-none text-white font-medium transition-all placeholder:text-neutral-400"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-none border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-accent-400 outline-none text-slate-950 font-medium transition-all placeholder:text-slate-400"
                     value={quoteData.vehicle}
                     onChange={(e) => setQuoteData({ ...quoteData, vehicle: e.target.value })}
                     aria-label="Vehicle registration or make and model (optional)"
@@ -789,18 +895,18 @@ export function BookingForm({
                   // and get behind the barrier before anything about price.
                   <div
                     role="alert"
-                    className="rounded-none border-2 border-yellow-400 bg-yellow-400/10 px-4 py-3"
+                    className="rounded-none border-2 border-accent-400 bg-accent-50 px-4 py-3"
                   >
-                    <div className="flex items-center gap-2 text-yellow-400 font-black text-[11px] uppercase tracking-[0.15em]">
+                    <div className="flex items-center gap-2 text-slate-950 font-black text-[11px] uppercase tracking-[0.15em]">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       {motorway} · Motorway recovery
                     </div>
-                    <p className="text-neutral-200 text-[11px] font-medium leading-relaxed mt-2">
+                    <p className="text-slate-700 text-[11px] font-medium leading-relaxed mt-2">
                       <strong>Get out of the left-hand doors and stand behind the barrier</strong>,
                       away from your vehicle. Don't attempt a repair on the hard shoulder. In
                       immediate danger, call 999; otherwise National Highways on 0300 123 5000.
                     </p>
-                    <p className="text-neutral-400 text-[11px] font-medium mt-2">
+                    <p className="text-slate-500 text-[11px] font-medium mt-2">
                       Motorway callout includes a £{MOTORWAY_SURCHARGE} surcharge for working a live
                       carriageway.
                     </p>
@@ -812,10 +918,10 @@ export function BookingForm({
                   // the booking and the phone number is right there, because a
                   // customer at the roadside being told "no" and nothing else
                   // is a customer ringing somebody else.
-                  <div className="flex items-start gap-2.5 border-2 border-neutral-700 bg-neutral-900 px-4 py-3">
+                  <div className="flex items-start gap-2.5 rounded-none border border-slate-300 bg-slate-50 px-4 py-3">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-neutral-500 mt-1" />
-                    <p className="text-[11px] font-medium text-neutral-300 leading-relaxed">
-                      <span className="font-black uppercase tracking-wider text-neutral-400">
+                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed">
+                      <span className="font-black uppercase tracking-wider text-slate-500">
                         No drivers on duty right now
                       </span>
                       <br />
@@ -823,7 +929,7 @@ export function BookingForm({
                       <a
                         href={`tel:${PHONE_TEL}`}
                         data-call="form-no-drivers"
-                        className="font-bold text-yellow-400 underline"
+                        className="font-bold text-slate-950 underline"
                       >
                         {PHONE_DISPLAY}
                       </a>{' '}
@@ -838,19 +944,19 @@ export function BookingForm({
                   // that reads as honest rather than slow once the reason is
                   // given. Either way the pickup is named, so the number is
                   // plainly an ETA to *their* location and not a generic claim.
-                  <div className="flex items-start gap-2.5 border-2 border-yellow-400 bg-yellow-400/10 px-4 py-3">
+                  <div className="flex items-start gap-2.5 rounded-none border border-accent-200 bg-accent-50 px-4 py-3">
                     <span className="relative flex h-2.5 w-2.5 shrink-0 mt-1">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-60 motion-safe:animate-ping" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-60 motion-safe:animate-ping" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent-400" />
                     </span>
-                    <p className="text-[11px] font-medium text-neutral-200 leading-relaxed">
-                      <span className="font-black uppercase tracking-wider text-yellow-400">
+                    <p className="text-[11px] font-medium text-slate-700 leading-relaxed">
+                      <span className="font-black uppercase tracking-wider text-slate-950">
                         {liveEta.queueMinutes > 0 ? 'All drivers on a job' : 'Driver available now'}
                       </span>
                       <br />
                       {liveEta.queueMinutes > 0 ? 'Next driver can be' : 'Can be'} with you at{' '}
-                      <span className="font-bold text-white">{shortPickup}</span> in about{' '}
-                      <span className="font-display text-base text-yellow-400">
+                      <span className="font-bold text-slate-950">{shortPickup}</span> in about{' '}
+                      <span className="font-display text-base text-slate-950">
                         {liveEta.etaMinutes} min
                       </span>
                     </p>
@@ -858,31 +964,83 @@ export function BookingForm({
                 )}
 
                 {!quoteData.service && (
-                  <p className="rounded-none border-2 border-neutral-800 bg-black/40 px-4 py-3 min-h-[60px] flex items-center justify-center text-center text-[11px] text-neutral-400 font-medium">
+                  <p className="rounded-none border-2 border-slate-200 bg-slate-50 px-4 py-3 min-h-[60px] flex items-center justify-center text-center text-[11px] text-slate-500 font-medium">
                     Choose what you need help with to see your price
                   </p>
                 )}
 
                 {quoteData.service && (
                   <div
-                    className="rounded-none border-2 border-neutral-800 bg-black/40 px-4 py-3 min-h-[60px] flex items-center"
+                    className="rounded-none border-2 border-slate-200 bg-slate-50 px-4 py-3 min-h-[60px] flex items-center"
                     aria-live="polite"
                   >
                     {needsDestination && dropoff.length < 3 ? (
-                      <p className="w-full text-center text-[11px] text-neutral-400 font-medium">
+                      <p className="w-full text-center text-[11px] text-slate-500 font-medium">
                         Add a drop-off address to reveal your price
                       </p>
                     ) : estimateStatus === 'loading' ? (
-                      <div className="w-full flex items-center justify-center gap-2 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Calculating your price…
-                      </div>
+                      <CalculatingPrice />
                     ) : price !== null ? (
                       <div className="w-full">
                         <PriceReveal price={price} estimate={estimate} night={isNight} />
                       </div>
                     ) : (
-                      <p className="w-full text-center text-[11px] text-neutral-400 font-medium">
+                      <p className="w-full text-center text-[11px] text-slate-500 font-medium">
                         We'll confirm your exact price on the call.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {paymentsConfig?.enabled && price !== null && (
+                  // Two ways to pay, each with its real numbers on it. Cash
+                  // still goes through a card, but only for the deposit, which
+                  // is our cut; the rest is the driver's, paid to them on the day.
+                  <div>
+                    <div
+                      role="radiogroup"
+                      aria-label="How would you like to pay?"
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      {(
+                        [
+                          [
+                            'card',
+                            'Pay by card',
+                            `${formatPounds(price * 100)} held, taken when done`,
+                          ],
+                          [
+                            'cash',
+                            'Pay cash',
+                            `${formatPounds(cashSplit(price, paymentsConfig.feePercent).deposit)} deposit, ${formatPounds(cashSplit(price, paymentsConfig.feePercent).toDriver)} to driver`,
+                          ],
+                        ] as const
+                      ).map(([value, title, note]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="radio"
+                          aria-checked={payWith === value}
+                          onClick={() => setPayWith(value)}
+                          className={`text-left px-3 py-2.5 rounded-none border-2 transition-colors ${
+                            payWith === value
+                              ? 'border-accent-400 bg-accent-50'
+                              : 'border-slate-200 bg-slate-50 hover:border-slate-400'
+                          }`}
+                        >
+                          <span className="block text-xs font-black uppercase tracking-wider text-slate-950">
+                            {title}
+                          </span>
+                          <span className="block text-[11px] text-slate-500 font-medium">
+                            {note}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    {payWith === 'cash' && (
+                      <p className="text-[11px] text-slate-500 font-medium mt-2 pl-1">
+                        The deposit secures your booking. It&apos;s only held on your card and taken
+                        when the job is done. Pay the rest to your driver in cash.
                       </p>
                     )}
                   </div>
@@ -895,7 +1053,7 @@ export function BookingForm({
                       setSubmitError(null);
                       setFormStep(1);
                     }}
-                    className="bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white p-4 rounded-none transition-colors border-2 border-neutral-800"
+                    className="bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-950 p-4 rounded-none transition-colors border-2 border-slate-200"
                     aria-label="Go back"
                   >
                     <ChevronLeft className="w-5 h-5" />
@@ -905,11 +1063,11 @@ export function BookingForm({
                     onClick={handleBookingSubmit}
                     disabled={submitting}
                     aria-disabled={cannotDispatch}
-                    className={`flex-1 bg-yellow-400 text-neutral-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm ${
+                    className={`flex-1 bg-accent-400 text-slate-950 font-display py-4 rounded-none transition-all flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm ${
                       cannotDispatch
                         ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-yellow-300 hover:shadow-md'
-                    } disabled:bg-yellow-400/50 disabled:cursor-not-allowed`}
+                        : 'hover:bg-accent-300 hover:shadow-md'
+                    } disabled:bg-accent-400/50 disabled:cursor-not-allowed`}
                   >
                     {submitting ? (
                       <>
@@ -926,6 +1084,22 @@ export function BookingForm({
                     )}
                   </button>
                 </div>
+                {/* The three reasons not to press it, answered directly under
+                    it. Every one is how the product already behaves: nothing
+                    is captured from a card until the job is closed, the
+                    tracking page cancels with no fee, and the quoted figure is
+                    the one the driver is handed. */}
+                <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 pt-0.5">
+                  {SUBMIT_REASSURANCES.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500"
+                    >
+                      <Check className="w-3 h-3 text-slate-950 shrink-0" aria-hidden="true" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
                 {errorMessage}
               </motion.div>
             )}
@@ -937,17 +1111,17 @@ export function BookingForm({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className="absolute inset-0 flex flex-col items-center justify-center text-center"
+                className="[grid-area:1/1] flex flex-col items-center justify-center text-center py-2"
                 role="status"
                 aria-live="polite"
               >
-                <div className="bg-yellow-400 text-neutral-950 rounded-none p-3 mb-4 inline-flex">
+                <div className="bg-accent-400 text-neutral-950 rounded-none p-3 mb-4 inline-flex">
                   <CheckCheck className="w-8 h-8" aria-hidden="true" />
                 </div>
                 <h3
                   ref={confirmRef}
                   tabIndex={-1}
-                  className="font-display text-2xl text-white uppercase tracking-tight outline-none"
+                  className="font-display text-2xl text-slate-950 uppercase tracking-tight outline-none"
                 >
                   {confirmedPrice === null || !driverAssigned
                     ? 'Request received'
@@ -955,7 +1129,7 @@ export function BookingForm({
                       ? 'Booking confirmed'
                       : 'Driver dispatched'}
                 </h3>
-                <p className="text-neutral-300 text-sm mt-2 max-w-xs">
+                <p className="text-slate-600 text-sm mt-2 max-w-xs">
                   {confirmedPrice === null ? (
                     // No price could be calculated, so nothing has been agreed and
                     // no truck is moving. Saying "driver dispatched" here would be
@@ -963,9 +1137,8 @@ export function BookingForm({
                     // someone stranded from ringing anyone else.
                     <>
                       We've got your details for{' '}
-                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>. We'll
-                      ring you on{' '}
-                      <span className="text-yellow-400 font-bold">{quoteData.phone}</span> to
+                      <span className="text-slate-950 font-bold">{friendlyPickup}</span>. We'll ring
+                      you on <span className="text-slate-950 font-bold">{quoteData.phone}</span> to
                       confirm the price, then send a driver.
                     </>
                   ) : !driverAssigned ? (
@@ -974,19 +1147,19 @@ export function BookingForm({
                     // a promise nobody made.
                     <>
                       We&apos;ve got your details for{' '}
-                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>. No driver
+                      <span className="text-slate-950 font-bold">{friendlyPickup}</span>. No driver
                       is free this second. We&apos;ll contact you as soon as possible on{' '}
-                      <span className="text-yellow-400 font-bold">{quoteData.phone}</span>.
+                      <span className="text-slate-950 font-bold">{quoteData.phone}</span>.
                     </>
                   ) : quoteData.timing === 'later' ? (
                     <>
                       We'll meet you at{' '}
-                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>.
+                      <span className="text-slate-950 font-bold">{friendlyPickup}</span>.
                     </>
                   ) : (
                     <>
                       Help is on the way to{' '}
-                      <span className="text-yellow-400 font-bold">{friendlyPickup}</span>.
+                      <span className="text-slate-950 font-bold">{friendlyPickup}</span>.
                     </>
                   )}
                 </p>
@@ -995,7 +1168,7 @@ export function BookingForm({
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 320, damping: 17, delay: 0.15 }}
-                    className="mt-4 bg-yellow-400 text-neutral-950 px-5 py-2 rounded-none shadow-sm flex items-baseline gap-2"
+                    className="mt-4 bg-accent-400 text-neutral-950 px-5 py-2 rounded-none shadow-sm flex items-baseline gap-2"
                   >
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">
                       Your price
@@ -1007,17 +1180,17 @@ export function BookingForm({
                   // Deliberately no ETA: an arrival countdown is the same false
                   // promise as the heading, and the wait hasn't started yet.
                   <div className="mt-4 flex flex-col items-center gap-1">
-                    <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
+                    <span className="text-xs text-slate-950 font-black tracking-[0.2em] uppercase">
                       Next step
                     </span>
-                    <span className="font-display text-xl text-yellow-400">We'll call you</span>
+                    <span className="font-display text-xl text-slate-950">We'll call you</span>
                   </div>
                 ) : quoteData.timing === 'later' ? (
                   <div className="mt-4 flex flex-col items-center gap-1">
-                    <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
+                    <span className="text-xs text-slate-950 font-black tracking-[0.2em] uppercase">
                       Scheduled for
                     </span>
-                    <span className="font-display text-xl text-yellow-400">
+                    <span className="font-display text-xl text-slate-950">
                       {formatScheduledFor(quoteData.scheduledFor)}
                     </span>
                   </div>
@@ -1025,22 +1198,20 @@ export function BookingForm({
                   // Measured from where a driver actually is, so it can be
                   // stated as an arrival time.
                   <div className="mt-4 flex items-baseline gap-2">
-                    <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
+                    <span className="text-xs text-slate-950 font-black tracking-[0.2em] uppercase">
                       Arriving in
                     </span>
-                    <span className="font-display text-4xl text-yellow-400">
+                    <span className="font-display text-4xl text-slate-950">
                       {confirmedEta ?? 24}
                     </span>
-                    <span className="text-neutral-500 font-bold text-sm">min</span>
+                    <span className="text-slate-500 font-bold text-sm">min</span>
                   </div>
                 ) : (
                   <div className="mt-4 flex flex-col items-center gap-1">
-                    <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
+                    <span className="text-xs text-slate-950 font-black tracking-[0.2em] uppercase">
                       Next step
                     </span>
-                    <span className="font-display text-xl text-yellow-400">
-                      We&apos;ll call you
-                    </span>
+                    <span className="font-display text-xl text-slate-950">We&apos;ll call you</span>
                   </div>
                 )}
 
@@ -1051,14 +1222,38 @@ export function BookingForm({
                   <div className="mt-5 w-full max-w-xs flex flex-col items-center gap-2">
                     <Link
                       to={trackPath(confirmedToken)}
-                      className="w-full bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display py-3.5 rounded-none flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm hover:shadow-md"
+                      className="w-full bg-accent-400 hover:bg-accent-300 text-neutral-950 font-display py-3.5 rounded-none flex items-center justify-center gap-2 text-base uppercase tracking-wider shadow-sm hover:shadow-md"
                     >
-                      <Navigation className="w-5 h-5" /> Track your driver
+                      {confirmedByCard ? (
+                        <>
+                          <ShieldCheck className="w-5 h-5" /> Add your card
+                        </>
+                      ) : confirmedDeposit ? (
+                        <>
+                          <ShieldCheck className="w-5 h-5" /> Pay {formatPounds(confirmedDeposit)}{' '}
+                          deposit
+                        </>
+                      ) : (
+                        <>
+                          <Navigation className="w-5 h-5" /> Track your driver
+                        </>
+                      )}
                     </Link>
+                    {confirmedByCard && (
+                      <p className="text-[11px] text-slate-500">
+                        Your card is only held. It&apos;s charged when the job is done.
+                      </p>
+                    )}
+                    {!confirmedByCard && confirmedDeposit !== null && confirmedPrice !== null && (
+                      <p className="text-[11px] text-slate-500">
+                        The deposit is only held until the job is done. Pay your driver{' '}
+                        {formatPounds(confirmedPrice * 100 - confirmedDeposit)} in cash.
+                      </p>
+                    )}
                     <CopyLink url={trackingUrl} />
                   </div>
                 ) : (
-                  <p className="mt-5 text-[11px] text-neutral-500 max-w-xs">
+                  <p className="mt-5 text-[11px] text-slate-500 max-w-xs">
                     Your request is saved on this phone and will be sent the moment we have signal.
                     If you can, ring us so we know you are waiting.
                   </p>
@@ -1067,7 +1262,7 @@ export function BookingForm({
                 <a
                   href={`tel:${PHONE_TEL}`}
                   data-call="confirmation"
-                  className="mt-4 text-red-400 hover:text-red-300 font-display text-xs uppercase tracking-wider inline-flex items-center gap-1.5"
+                  className="mt-4 text-slate-950 hover:text-slate-600 font-display text-xs uppercase tracking-wider inline-flex items-center gap-1.5"
                 >
                   <PhoneCall className="w-3.5 h-3.5" /> Need to talk? Call {PHONE_DISPLAY}
                 </a>
@@ -1076,13 +1271,13 @@ export function BookingForm({
           </AnimatePresence>
         </div>
 
-        <p className="text-center text-xs text-neutral-400 font-medium mt-4 flex items-center justify-center gap-1.5 border-t border-neutral-900 pt-4">
-          <ShieldCheck className="w-4 h-4 text-yellow-400" />
+        <p className="text-center text-xs text-slate-500 font-medium mt-4 flex items-center justify-center gap-1.5 border-t border-slate-100 pt-4">
+          <Lock className="w-4 h-4 text-slate-950" />
           Sent over a secure, encrypted connection
         </p>
-        <p className="text-center text-[11px] text-neutral-500 mt-2 leading-relaxed">
+        <p className="text-center text-[11px] text-slate-500 mt-2 leading-relaxed">
           By requesting dispatch you agree we may contact you about your recovery. See our{' '}
-          <Link to="/privacy" className="underline hover:text-neutral-300">
+          <Link to="/privacy" className="underline hover:text-slate-600">
             Privacy Policy
           </Link>
           .

@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+from . import models, payments, schemas
 from .compliance import DOC_TYPES, Compliance, evaluate, valid_until
 from .eta import minutes_until
 from .timeutil import iso, iso_date, today_uk
@@ -58,6 +58,14 @@ def booking_out(
         cancelledBy=b.cancelled_by,
         rating=b.rating,
         ratingComment=b.rating_comment,
+        paymentMethod=b.payment_method or "cash",
+        paymentStatus=b.payment_status or "none",
+        amountPaidPence=b.amount_paid_pence,
+        platformFeePence=b.platform_fee_pence,
+        driverNetPence=b.driver_net_pence,
+        refundedPence=b.refunded_pence or 0,
+        depositPence=b.deposit_pence if (b.payment_method or "cash") == "cash" else None,
+        cashToCollectPence=payments.cash_to_collect(b),
     )
 
 

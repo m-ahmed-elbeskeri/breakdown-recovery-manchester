@@ -18,6 +18,7 @@ import { AdminBookings } from './AdminBookings';
 import { AdminCompliance } from './AdminCompliance';
 import { AdminDriverReview } from './AdminDriverReview';
 import { AdminDrivers } from './AdminDrivers';
+import { AdminPayments } from './AdminPayments';
 import { AdminSetup } from './AdminSetup';
 import { AdminTeam } from './AdminTeam';
 
@@ -44,6 +45,7 @@ export function AdminApp() {
           <Route path="team" element={<AdminTeam />} />
           <Route path="audit" element={<AdminAudit />} />
           <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="payments" element={<AdminPayments />} />
           <Route path="telemetry" element={<Navigate to="/admin/analytics" replace />} />
           <Route path="account" element={<AccountPanel />} />
           <Route
@@ -85,6 +87,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
   const nav = [
     { to: '/admin', label: 'Bookings', end: true, badge: 0 },
     { to: '/admin/analytics', label: 'Analytics', end: false, badge: 0 },
+    { to: '/admin/payments', label: 'Payments', end: false, badge: 0 },
     { to: '/admin/drivers', label: 'Drivers', end: false, badge: counts.review },
     { to: '/admin/compliance', label: 'Compliance', end: false, badge: counts.compliance },
     { to: '/admin/team', label: 'Team', end: false, badge: 0 },
@@ -94,7 +97,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-200 font-sans">
       <div className="hazard-stripes h-2" aria-hidden="true" />
-      <header className="border-b-2 border-yellow-400">
+      <header className="border-b-2 border-accent-400">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
           <Link to="/admin" className="flex items-center gap-3 min-w-0">
             <Logo className="w-9 h-9 shrink-0" />
@@ -110,7 +113,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-wider min-w-0">
             <Link
               to="/"
-              className="text-neutral-400 hover:text-yellow-400 inline-flex items-center gap-1.5"
+              className="text-neutral-400 hover:text-accent-400 inline-flex items-center gap-1.5"
             >
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">Site</span>
@@ -139,14 +142,14 @@ function AdminLayout({ children }: { children: ReactNode }) {
               className={({ isActive }) =>
                 `shrink-0 px-3.5 py-2.5 text-[11px] font-black uppercase tracking-wider border-b-4 inline-flex items-center gap-1.5 ${
                   isActive
-                    ? 'border-yellow-400 text-white'
+                    ? 'border-accent-400 text-white'
                     : 'border-transparent text-neutral-500 hover:text-white'
                 }`
               }
             >
               {item.label}
               {item.badge > 0 && (
-                <span className="bg-yellow-400 text-neutral-950 px-1.5 min-w-[1.25rem] text-center">
+                <span className="bg-accent-400 text-neutral-950 px-1.5 min-w-[1.25rem] text-center">
                   {item.badge}
                 </span>
               )}

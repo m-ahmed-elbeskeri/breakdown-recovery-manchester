@@ -48,6 +48,16 @@ export interface TrackInfo {
   cancelledBy: 'customer' | 'driver' | 'office' | null;
   rating: number | null;
   canCancel: boolean;
+  paymentMethod: 'card' | 'cash';
+  /** none | requires_payment | authorised | paid | deposit_paid | paid_in_person | failed | cancelled | refunded | partly_refunded
+   *  (on a cash job, requires_payment / authorised / failed describe the deposit) */
+  paymentStatus: string;
+  /** Whether this booking can be paid by card through the site. */
+  cardAvailable: boolean;
+  /** Cash jobs: the deposit to pay by card, in pence. Null when none is asked for. */
+  depositPence?: number | null;
+  /** Cash jobs: what is paid to the driver in cash on the day, in pence. */
+  cashToCollectPence?: number | null;
 }
 
 export class TrackError extends Error {

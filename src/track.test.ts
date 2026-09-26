@@ -26,6 +26,9 @@ const base: TrackInfo = {
   cancelledBy: null,
   rating: null,
   canCancel: true,
+  paymentMethod: 'cash',
+  paymentStatus: 'none',
+  cardAvailable: false,
 };
 
 const dave = {

@@ -10,16 +10,20 @@ type IconType = ComponentType<{ className?: string }>;
 
 export interface TrustItem {
   text: string;
+  /** What the promise means for the person reading, in a few words. */
+  detail: string;
   icon: IconType;
 }
 
 // Each icon has to mean its label literally. A map pin says "a location", not
 // "the whole UK"; a star says "highly rated", not "cheap".
 export const TRUST_ITEMS: TrustItem[] = [
-  { text: '24/7 Availability', icon: ClockRound },
-  { text: 'Price Up Front', icon: Coins },
-  { text: 'Live Driver Tracking', icon: Navigation },
-  { text: 'Fully Insured', icon: ShieldCheck },
+  // Worded as what the reader gets, not what we have: "price before you book"
+  // answers the fear, where "price up front" only names a policy.
+  { text: 'Open 24/7', detail: 'Day and night, all year', icon: ClockRound },
+  { text: 'Price before you book', detail: 'No card, no surprises', icon: Coins },
+  { text: 'Track your driver', detail: 'Name and live ETA on a map', icon: Navigation },
+  { text: 'Fully insured', detail: 'Your car is in safe hands', icon: ShieldCheck },
 ];
 
 export interface FeaturedService {

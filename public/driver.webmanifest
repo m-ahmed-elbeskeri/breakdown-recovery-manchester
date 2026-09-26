@@ -7,8 +7,8 @@
   "scope": "/driver",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0d2038",
-  "theme_color": "#0e151d",
+  "background_color": "#111418",
+  "theme_color": "#111418",
   "categories": ["business", "navigation", "productivity"],
   "icons": [
     {

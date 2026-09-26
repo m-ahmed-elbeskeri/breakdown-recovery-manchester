@@ -39,7 +39,7 @@ export function ServicePage({ page }: { page: ServicePageData }) {
 
   return (
     <MetricsProvider>
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-yellow-400 selection:text-neutral-950">
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-accent-400 selection:text-neutral-950">
         <UrgencyBar regionName={HOME_REGION} />
         <Header regionName={HOME_REGION} />
         <main>
@@ -52,14 +52,15 @@ export function ServicePage({ page }: { page: ServicePageData }) {
             defaultService={page.service}
             lines={[
               <>
-                From <span className="text-red-600 font-black">£{page.fromPrice}</span>, shown
+                From <span className="text-slate-950 font-black">£{page.fromPrice}</span>, shown
                 before you book
               </>,
               <>
-                <span className="text-red-600 font-black">24/7</span> across Greater Manchester
+                <span className="text-slate-950 font-black">24/7</span> across Greater Manchester
               </>,
               <>
-                <span className="text-red-600 font-black">Track your driver</span> live to your door
+                <span className="text-slate-950 font-black">Track your driver</span> live to your
+                door
               </>,
             ]}
           />
@@ -68,7 +69,7 @@ export function ServicePage({ page }: { page: ServicePageData }) {
           <section className="py-12 sm:py-20 px-4 bg-white" aria-labelledby="steps-heading">
             <div className="max-w-6xl mx-auto">
               <Reveal className="text-center max-w-3xl mx-auto mb-10">
-                <div className="text-xs font-black tracking-[0.3em] uppercase text-red-600 mb-3">
+                <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-3">
                   What happens
                 </div>
                 <h2
@@ -82,8 +83,8 @@ export function ServicePage({ page }: { page: ServicePageData }) {
               <ol className="grid md:grid-cols-3 gap-6">
                 {page.steps.map((step, i) => (
                   <Reveal key={step.title} delay={i * 0.1} className="h-full">
-                    <li className="h-full bg-slate-50 border-2 border-slate-200 p-6">
-                      <span className="inline-flex w-10 h-10 bg-neutral-950 text-yellow-400 font-display text-xl items-center justify-center mb-4">
+                    <li className="h-full bg-white border border-slate-200 shadow-sm p-6">
+                      <span className="inline-flex w-10 h-10 bg-accent-400 text-neutral-950 font-display text-xl items-center justify-center mb-4">
                         {i + 1}
                       </span>
                       <h3 className="font-sans font-extrabold text-xl tracking-tight mb-2">
@@ -99,10 +100,10 @@ export function ServicePage({ page }: { page: ServicePageData }) {
             </div>
           </section>
 
-          <section className="py-12 sm:py-20 px-4 bg-navy-900 text-white">
+          <section className="py-12 sm:py-20 px-4 bg-white text-slate-950">
             <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-start">
               <Reveal>
-                <div className="text-xs font-black tracking-[0.3em] uppercase text-yellow-400 mb-3">
+                <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-3">
                   What's included
                 </div>
                 <h2 className="font-sans font-extrabold text-3xl md:text-4xl tracking-tight mb-6">
@@ -110,25 +111,27 @@ export function ServicePage({ page }: { page: ServicePageData }) {
                 </h2>
                 <ul className="space-y-3">
                   {page.included.map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-blue-50 font-medium">
-                      <CheckCircle2 className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                    <li key={item} className="flex items-start gap-3 text-slate-700 font-medium">
+                      <CheckCircle2 className="w-5 h-5 text-slate-950 shrink-0 mt-0.5" />
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
               </Reveal>
               <Reveal delay={0.1}>
-                <div className="bg-navy-800 border-2 border-yellow-400 p-6 sm:p-8">
-                  <div className="text-xs font-black tracking-[0.3em] uppercase text-yellow-400 mb-2">
+                <div className="bg-slate-50 border border-accent-200 p-6 sm:p-8">
+                  <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-2">
                     Price
                   </div>
-                  <div className="font-display text-5xl sm:text-6xl text-white leading-none">
+                  <div className="font-display text-5xl sm:text-6xl text-slate-950 leading-none">
                     From £{page.fromPrice}
                   </div>
-                  <p className="text-blue-100 font-medium mt-4 leading-relaxed">{page.priceNote}</p>
+                  <p className="text-slate-600 font-medium mt-4 leading-relaxed">
+                    {page.priceNote}
+                  </p>
                   <Link
                     to={PRICING_PATH}
-                    className="mt-6 inline-flex items-center gap-2 text-yellow-400 hover:text-yellow-300 font-bold uppercase tracking-wider text-sm"
+                    className="mt-6 inline-flex items-center gap-2 text-slate-950 hover:text-slate-600 font-bold uppercase tracking-wider text-sm"
                   >
                     See the full tariff <ArrowRight className="w-4 h-4" />
                   </Link>
@@ -164,7 +167,7 @@ export function ServicePage({ page }: { page: ServicePageData }) {
                   <Link
                     key={p.slug}
                     to={servicePath(p)}
-                    className="bg-white border-2 border-slate-200 hover:border-yellow-400 px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-700 hover:text-slate-950 transition-colors"
+                    className="bg-white border border-slate-200 hover:border-accent-400 px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-700 hover:text-slate-950 transition-colors"
                   >
                     {p.name}
                   </Link>

@@ -34,6 +34,21 @@ class Settings(BaseSettings):
     notify_email_from: str = "onboarding@resend.dev"
     notify_email_to: str = ""
 
+    # Card payments and driver payouts (Stripe Connect). Leave the keys empty
+    # and every booking is paid to the driver on the day, as before.
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    # Stripe signs connected accounts' events (a driver finishing payout
+    # setup) from a separate webhook endpoint with its own secret.
+    stripe_connect_webhook_secret: str = ""
+    # The platform's cut of every job, card or cash.
+    platform_fee_percent: int = 20
+
+    @property
+    def payments_enabled(self) -> bool:
+        return bool(self.stripe_secret_key and self.stripe_publishable_key)
+
     @property
     def sqlalchemy_url(self) -> str:
         """Normalise common provider URLs to the psycopg (v3) driver."""

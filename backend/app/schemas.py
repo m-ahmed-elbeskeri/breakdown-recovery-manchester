@@ -46,6 +46,10 @@ class BookingCreate(BaseModel):
     distanceMiles: Optional[float] = None
     durationMinutes: Optional[int] = None
     price: Optional[int] = None
+    # "card": the full price by card. "cash": the platform's cut as a card
+    # deposit and the rest in cash to the driver. Both need card payments
+    # switched on and a price; otherwise the booking is paid to the driver.
+    paymentMethod: Literal["card", "cash"] = "cash"
 
     @field_validator("phone")
     @classmethod
@@ -64,6 +68,11 @@ class BookingCreated(BaseModel):
     eta: int
     etaSource: Literal["driver", "fallback"] = "fallback"
     trackToken: Optional[str] = None
+    # "card" only if card payment was accepted for this booking.
+    paymentMethod: str = "cash"
+    # On a cash booking: the deposit to pay by card, in pence. None if no
+    # deposit is asked for (card payments off, or no price).
+    depositPence: Optional[int] = None
 
 
 class MetricsOut(BaseModel):
@@ -103,6 +112,15 @@ class BookingOut(BaseModel):
     cancelledBy: Optional[str]
     rating: Optional[int]
     ratingComment: Optional[str]
+    paymentMethod: str = "cash"
+    paymentStatus: str = "none"
+    amountPaidPence: Optional[int] = None
+    platformFeePence: Optional[int] = None
+    driverNetPence: Optional[int] = None
+    refundedPence: int = 0
+    depositPence: Optional[int] = None
+    # What the driver collects in cash on the day, in pence. None on a card job.
+    cashToCollectPence: Optional[int] = None
 
 
 class BookingStatusIn(BaseModel):
@@ -113,6 +131,9 @@ class BookingStatusIn(BaseModel):
 class DriverJobStatusIn(BaseModel):
     # "pending" hands a job back to the queue.
     status: Literal["pending", "accepted", "en_route", "on_scene", "complete"]
+    # Marking a card job done when no card payment went through: the driver
+    # took the money on the day instead.
+    paidInPerson: bool = False
 
 
 # ── Drivers on the road ─────────────────────────────────────────────────────
@@ -186,6 +207,12 @@ class TrackOut(BaseModel):
     cancelledBy: Optional[str]
     rating: Optional[int]
     canCancel: bool
+    paymentMethod: str = "cash"
+    paymentStatus: str = "none"
+    # Whether this customer can pay by card through the site.
+    cardAvailable: bool = False
+    depositPence: Optional[int] = None
+    cashToCollectPence: Optional[int] = None
 
 
 class RatingIn(BaseModel):
@@ -594,6 +621,122 @@ class ComplianceRowOut(BaseModel):
     state: str
     validUntil: Optional[str]
     blocksWork: bool
+
+
+# ── Payments ────────────────────────────────────────────────────────────────
+
+
+class PaymentsConfigOut(BaseModel):
+    enabled: bool
+    publishableKey: Optional[str]
+    feePercent: int
+
+
+class PaymentMethodIn(BaseModel):
+    method: Literal["card", "cash"]
+
+
+class CardPaymentOut(BaseModel):
+    clientSecret: Optional[str]
+    publishableKey: str
+    amountPence: int
+    status: str
+
+
+class PayoutAccountOut(BaseModel):
+    connected: bool
+    detailsSubmitted: bool
+    payoutsEnabled: bool
+
+
+class StripeBalanceOut(BaseModel):
+    availablePence: int
+    pendingPence: int
+    instantAvailablePence: int
+
+
+class LedgerEntryOut(BaseModel):
+    id: int
+    kind: str
+    amountPence: int
+    bookingId: Optional[int]
+    note: Optional[str]
+    createdAt: str
+
+
+class EarningsOut(BaseModel):
+    enabled: bool
+    feePercent: int
+    account: PayoutAccountOut
+    # Positive: owed to the driver. Negative: the driver owes the platform.
+    balancePence: int
+    stripeBalance: Optional[StripeBalanceOut]
+    earned30DaysPence: int
+    commission30DaysPence: int
+    transferred30DaysPence: int
+    entries: list[LedgerEntryOut]
+
+
+class LinkOut(BaseModel):
+    url: str
+
+
+class PayoutIn(BaseModel):
+    instant: bool = False
+
+
+class PayoutOut(BaseModel):
+    payoutId: str
+    amountPence: int
+    feePence: int
+    instant: bool
+    arrivalDate: Optional[str]
+
+
+class LedgerAdjustmentIn(BaseModel):
+    kind: Literal["settlement", "adjustment"]
+    amountPence: int = Field(ge=-1_000_000, le=1_000_000)
+    note: str = Field(min_length=2, max_length=200)
+
+
+class RefundIn(BaseModel):
+    amountPence: Optional[int] = Field(default=None, gt=0)
+
+
+class DriverBalanceOut(BaseModel):
+    driverId: int
+    name: str
+    connected: bool
+    payoutsEnabled: bool
+    balancePence: int
+
+
+class PaymentRowOut(BaseModel):
+    bookingId: int
+    createdAt: str
+    service: str
+    price: Optional[int]
+    status: str
+    paymentMethod: str
+    paymentStatus: str
+    amountPaidPence: Optional[int]
+    platformFeePence: Optional[int]
+    driverNetPence: Optional[int]
+    refundedPence: int
+    driverName: Optional[str]
+    depositPence: Optional[int] = None
+
+
+class PaymentsSummaryOut(BaseModel):
+    enabled: bool
+    feePercent: int
+    cardTaken30DaysPence: int
+    platformFees30DaysPence: int
+    refunded30DaysPence: int
+    owedToDriversPence: int
+    owedByDriversPence: int
+    drivers: list[DriverBalanceOut]
+    recent: list[PaymentRowOut]
 
 
 # ── Telemetry ───────────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@ describe('isNightHour', () => {
 
 describe('estimatePrice — roadside (flat fee) jobs', () => {
   it('prices a jump start at its flat fee, ignoring distance', () => {
-    expect(estimatePrice({ service: 'jumpstart' })).toBe(55);
+    expect(estimatePrice({ service: 'jumpstart' })).toBe(40);
   });
   it('prices a tyre job', () => {
     expect(estimatePrice({ service: 'tyre' })).toBe(95);
@@ -67,8 +67,8 @@ describe('estimatePrice — empty running', () => {
   });
 
   it('charges a distant roadside job for the miles beyond the allowance', () => {
-    // 20 empty miles: 12 chargeable at £1.50 = £18 on top of the £55 flat fee = £73 → £75.
-    expect(estimatePrice({ service: 'jumpstart', deadheadMiles: 20 })).toBe(75);
+    // 20 empty miles: 12 chargeable at £1.50 = £18 on top of the £40 flat fee = £58 → £60.
+    expect(estimatePrice({ service: 'jumpstart', deadheadMiles: 20 })).toBe(60);
   });
 
   it('adds empty running to a tow on top of the loaded miles', () => {
@@ -95,8 +95,8 @@ describe('estimatePrice — motorway', () => {
   });
 
   it('compounds the night multiplier over the surcharge', () => {
-    // (£55 + £40) x 1.2 = £114 -> £115
-    expect(estimatePrice({ service: 'jumpstart', motorway: true, night: true })).toBe(115);
+    // (£40 + £40) x 1.2 = £96 -> £95
+    expect(estimatePrice({ service: 'jumpstart', motorway: true, night: true })).toBe(95);
   });
 
   it('applies to tows as well as roadside jobs', () => {

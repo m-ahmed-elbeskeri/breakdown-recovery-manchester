@@ -26,7 +26,7 @@ function Target({ event }: { event: AuditEvent }) {
         : null;
   if (driverId !== null && event.targetType !== 'booking') {
     return (
-      <Link to={`/admin/drivers/${driverId}`} className="text-yellow-400 underline">
+      <Link to={`/admin/drivers/${driverId}`} className="text-accent-400 underline">
         Driver #{driverId}
       </Link>
     );
@@ -98,7 +98,7 @@ export function AdminAudit() {
             aria-pressed={filter === f.key}
             className={`shrink-0 px-3.5 py-2 text-[11px] font-black uppercase tracking-wider border-2 ${
               filter === f.key
-                ? 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                ? 'bg-accent-400 text-neutral-950 border-accent-400'
                 : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
             }`}
           >

@@ -24,6 +24,9 @@ export interface BookingArgs {
   motorway?: boolean;
   /** Indicative quoted price shown to the customer (in £). */
   price?: number;
+  /** "card": the full price through the site. "cash": the platform's cut as a
+   *  card deposit and the rest to the driver. Honoured only when card payments are on. */
+  paymentMethod?: 'card' | 'cash';
 }
 
 /** A booking with the client-generated idempotency key attached. */
@@ -38,6 +41,10 @@ export interface BookingResult {
   /** The key to the customer's live tracking page. Absent for a queued booking
    *  that has not reached the server yet. */
   trackToken?: string;
+  /** Present when the customer will pay by card through the site. */
+  paymentMethod?: 'card';
+  /** Present on a cash booking that asks for a card deposit, in pence. */
+  depositPence?: number;
 }
 
 /** What the backend answers a booking with. */
@@ -45,6 +52,8 @@ export interface BookingResponse {
   eta?: number;
   etaSource?: 'driver' | 'fallback';
   trackToken?: string | null;
+  paymentMethod?: string;
+  depositPence?: number | null;
 }
 
 /** Sends a booking to the backend. Injected so the queue logic is testable. */
@@ -103,6 +112,11 @@ const tokenOf = (result: unknown): string | undefined => {
   return typeof token === 'string' && token.length > 0 ? token : undefined;
 };
 
+const depositOf = (result: unknown): number | undefined => {
+  const deposit = (result as { depositPence?: unknown } | null)?.depositPence;
+  return typeof deposit === 'number' && deposit > 0 ? deposit : undefined;
+};
+
 const submitWithTimeout = (
   post: PostBooking,
   payload: BookingPayload,
@@ -146,6 +160,10 @@ export async function submitBooking(
       etaSource: etaSourceOf(result),
       mode: 'api',
       ...(trackToken ? { trackToken } : {}),
+      ...((result as { paymentMethod?: unknown } | null)?.paymentMethod === 'card'
+        ? { paymentMethod: 'card' as const }
+        : {}),
+      ...(depositOf(result) ? { depositPence: depositOf(result) } : {}),
     };
   } catch (err) {
     console.warn('[booking] API submit failed, queued for retry:', err);

@@ -66,7 +66,7 @@ export function AdminCompliance() {
                     <td className="p-3">
                       <Link
                         to={`/admin/drivers/${r.driverId}`}
-                        className="text-white font-bold hover:text-yellow-400 underline"
+                        className="text-white font-bold hover:text-accent-400 underline"
                       >
                         {r.driverName}
                       </Link>

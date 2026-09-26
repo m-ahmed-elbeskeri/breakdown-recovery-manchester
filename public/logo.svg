@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Car Recovery Near Me">
-  <rect width="512" height="512" fill="#0d2038"/>
+  <rect width="512" height="512" fill="#111418"/>
 
   <!-- brand mark: a map pin with a tow hook inside -->
   <g transform="translate(152,36) scale(4.33)">
-    <path d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z" fill="#f5c518" stroke="#0e151d" stroke-width="3" stroke-linejoin="round"/>
-    <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#0e151d" stroke-width="2.6"/>
-    <path d="M26.5 12.8 V19.5 C26.5 25 19 25.5 19 21" fill="none" stroke="#0e151d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z" fill="#f5c518" stroke="#111418" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#111418" stroke-width="2.6"/>
+    <path d="M26.5 12.8 V19.5 C26.5 25 19 25.5 19 21" fill="none" stroke="#111418" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
   <!-- wordmark -->

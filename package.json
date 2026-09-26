@@ -17,6 +17,8 @@
     "brand:assets": "node scripts/render-brand.mjs"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.10.0",
+    "@stripe/stripe-js": "^9.16.0",
     "flatpickr": "^4.6.13",
     "iconoir-react": "^7.11.1",
     "leaflet": "^1.9.4",

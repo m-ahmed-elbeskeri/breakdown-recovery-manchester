@@ -7,6 +7,7 @@ import { DriverAccountPage } from '../account/AccountPage';
 import { DriverApplicationPage } from './DriverApplicationPage';
 import { DriverConsolePage } from './DriverConsolePage';
 import { DriverDocumentsPage } from './DriverDocumentsPage';
+import { DriverEarningsPage } from './DriverEarningsPage';
 
 export function DriverApp() {
   return (
@@ -15,6 +16,7 @@ export function DriverApp() {
         <Route index element={<DriverConsolePage />} />
         <Route path="application" element={<DriverApplicationPage />} />
         <Route path="documents" element={<DriverDocumentsPage />} />
+        <Route path="earnings" element={<DriverEarningsPage />} />
         <Route path="account" element={<DriverAccountPage />} />
         <Route path="*" element={<Navigate to="/driver" replace />} />
       </Routes>

@@ -73,6 +73,30 @@ class Booking(Base):
     rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rating_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # How the customer pays. "card": the full price held on their card through
+    # the site and taken when the job is done. "cash": the platform's cut paid
+    # as a card deposit (held at booking, taken when the job is done) and the
+    # rest in cash to the driver. With no deposit (payments off, or the
+    # customer never added a card) the driver collects the full price and the
+    # platform's cut is owed by the driver.
+    payment_method: Mapped[str] = mapped_column(String(8), default="cash")
+    # none | requires_payment | authorised | paid | deposit_paid |
+    # paid_in_person | failed | cancelled | refunded | partly_refunded
+    # (for a cash job, requires_payment / authorised / failed describe the deposit)
+    payment_status: Mapped[str] = mapped_column(String(20), default="none", index=True)
+    stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    stripe_payment_method_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    stripe_charge_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # What was taken and how it was split, in pence.
+    amount_paid_pence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    platform_fee_pence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    driver_net_pence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    refunded_pence: Mapped[int] = mapped_column(Integer, default=0)
+    # Cash jobs only: the deposit asked for on the customer's card, in pence.
+    deposit_pence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, index=True
     )
@@ -187,6 +211,14 @@ class Driver(Base):
     vehicle_gvw_kg: Mapped[int | None] = mapped_column(Integer, nullable=True)
     operator_licence_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     motorway_work: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Getting paid: their Stripe Express account, and whether Stripe has
+    # finished checking who they are and can send money to their bank.
+    stripe_account_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
+    stripe_details_submitted: Mapped[bool] = mapped_column(Boolean, default=False)
+    stripe_payouts_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # On duty and taking jobs. The driver's own switch, not dispatch's.
     available: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
@@ -309,3 +341,42 @@ class Metric(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
+
+
+# ── Payments ────────────────────────────────────────────────────────────────
+
+
+class DriverLedgerEntry(Base):
+    """One movement of money between the platform and a driver, in pence.
+
+    Positive: the platform owes the driver (their share of a card job, or
+    commission they have settled with the office). Negative: the driver owes
+    the platform, or has been paid (a transfer, the cut on a cash job, an
+    instant payout fee, a refund clawed back). A driver's balance is the sum.
+    Rows are never edited; a mistake is corrected with another row.
+    """
+
+    __tablename__ = "driver_ledger"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    driver_id: Mapped[int] = mapped_column(Integer, index=True)
+    booking_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    # card_earning | cash_commission | transfer | instant_fee | refund |
+    # settlement | adjustment
+    kind: Mapped[str] = mapped_column(String(24))
+    amount_pence: Mapped[int] = mapped_column(Integer)
+    stripe_transfer_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    stripe_payout_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class StripeEvent(Base):
+    """A Stripe webhook already handled, so a retried delivery changes nothing."""
+
+    __tablename__ = "stripe_events"
+
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    type: Mapped[str] = mapped_column(String(80))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

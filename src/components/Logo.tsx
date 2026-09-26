@@ -1,4 +1,4 @@
-// The brand mark for Car Recovery Near Me: a hazard-yellow map pin, and inside it
+// The brand mark for Car Recovery Near Me: a yellow map pin, and inside it
 // a tow hook. The pin says "near me" — it is the glyph every phone already
 // uses for "where you are" — and the hook says what turns up. Drawn from
 // scratch rather than an icon-library glyph so it reads as a real logo, and
@@ -21,16 +21,16 @@ export function Logo({ className = 'w-10 h-10' }: { className?: string }) {
       <path
         d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z"
         fill="#f5c518"
-        stroke="#0e151d"
+        stroke="#111418"
         strokeWidth="3"
         strokeLinejoin="round"
       />
       {/* the tow hook: eye, shank, curl */}
-      <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#0e151d" strokeWidth="2.6" />
+      <circle cx="26.5" cy="10.5" r="2.3" fill="none" stroke="#111418" strokeWidth="2.6" />
       <path
         d="M26.5 12.8 V19.5 C26.5 25 19 25.5 19 21"
         fill="none"
-        stroke="#0e151d"
+        stroke="#111418"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"

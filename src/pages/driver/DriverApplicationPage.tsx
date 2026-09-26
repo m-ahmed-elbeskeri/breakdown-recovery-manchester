@@ -151,7 +151,7 @@ export function DriverApplicationPage() {
       <DriverShell title="Account suspended">
         <Banner tone="danger" title="You can't take jobs at the moment">
           {profile.reviewNote ?? 'Your account has been suspended.'} Ring the office on{' '}
-          <a href={`tel:${PHONE_TEL}`} className="text-yellow-400 underline font-bold">
+          <a href={`tel:${PHONE_TEL}`} className="text-accent-400 underline font-bold">
             {PHONE_DISPLAY}
           </a>{' '}
           to talk it through.
@@ -219,7 +219,7 @@ export function DriverApplicationPage() {
               >
                 <span
                   className={`h-1.5 w-full ${
-                    active ? 'bg-yellow-400' : done ? 'bg-[var(--color-success)]' : 'bg-neutral-800'
+                    active ? 'bg-accent-400' : done ? 'bg-[var(--color-success)]' : 'bg-neutral-800'
                   }`}
                 />
                 <span
@@ -317,7 +317,7 @@ function EditLink({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="text-xs font-bold uppercase tracking-wider text-yellow-400 underline"
+      className="text-xs font-bold uppercase tracking-wider text-accent-400 underline"
     >
       Change
     </button>
@@ -406,7 +406,7 @@ function SendStep({
               type="checkbox"
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
-              className="mt-0.5 w-5 h-5 accent-yellow-400 shrink-0"
+              className="mt-0.5 w-5 h-5 accent-accent-400 shrink-0"
             />
             <span>
               These details are true, and the documents are mine and current. I understand the

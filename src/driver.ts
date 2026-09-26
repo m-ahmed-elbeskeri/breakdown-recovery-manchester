@@ -49,6 +49,16 @@ export interface Job {
   cancelledBy: 'customer' | 'driver' | 'office' | null;
   rating: number | null;
   ratingComment: string | null;
+  paymentMethod: 'card' | 'cash';
+  paymentStatus: string;
+  amountPaidPence: number | null;
+  platformFeePence: number | null;
+  driverNetPence: number | null;
+  refundedPence: number;
+  /** Cash jobs: the deposit asked for on the customer's card, in pence. */
+  depositPence?: number | null;
+  /** Cash jobs: what the driver collects in cash, in pence. Null on a card job. */
+  cashToCollectPence?: number | null;
 }
 
 export type JobStatus = 'pending' | 'accepted' | 'en_route' | 'on_scene' | 'complete' | 'cancelled';
@@ -120,8 +130,49 @@ export interface StatePatch {
 export const setMyState = (patch: StatePatch) =>
   apiFetch<Driver>('/api/me/state', { method: 'POST', json: patch });
 
-export const setMyJobStatus = (jobId: number, status: Exclude<JobStatus, 'cancelled'>) =>
-  apiFetch<Job>(`/api/me/jobs/${jobId}/status`, { method: 'POST', json: { status } });
+export const setMyJobStatus = (
+  jobId: number,
+  status: Exclude<JobStatus, 'cancelled'>,
+  paidInPerson = false,
+) =>
+  apiFetch<Job>(`/api/me/jobs/${jobId}/status`, {
+    method: 'POST',
+    json: paidInPerson ? { status, paidInPerson } : { status },
+  });
+
+const pounds = (pence: number) => `£${(pence / 100).toFixed(2).replace(/\.00$/, '')}`;
+
+/** Whether the customer's card deposit is held, so the driver collects only the rest. */
+export const depositHeld = (job: Pick<Job, 'paymentMethod' | 'paymentStatus' | 'depositPence'>) =>
+  job.paymentMethod === 'cash' && !!job.depositPence && job.paymentStatus === 'authorised';
+
+/** What a driver needs to know about getting paid for a job, in a few words. */
+export function paymentLine(
+  job: Pick<
+    Job,
+    'paymentMethod' | 'paymentStatus' | 'price' | 'depositPence' | 'cashToCollectPence'
+  >,
+): string {
+  const amount = job.price !== null ? `£${job.price}` : 'the price';
+  if (job.paymentStatus === 'paid') return 'Paid by card';
+  if (job.paymentStatus === 'deposit_paid') return 'Deposit taken · rest paid in cash';
+  if (job.paymentStatus === 'paid_in_person') return 'Paid in person';
+  if (job.paymentMethod === 'card') {
+    return job.paymentStatus === 'authorised'
+      ? 'Card held · nothing to collect'
+      : `Card not added · collect ${amount} if unpaid`;
+  }
+  const collect = job.cashToCollectPence != null ? pounds(job.cashToCollectPence) : amount;
+  return depositHeld(job)
+    ? `Cash · collect ${collect} (deposit held)`
+    : `Cash · collect ${collect}`;
+}
+
+/** A card job nobody has paid for yet: finishing it means the driver took the money. */
+export const needsPaymentOnScene = (job: Pick<Job, 'paymentMethod' | 'paymentStatus'>): boolean =>
+  job.paymentMethod === 'card' &&
+  job.paymentStatus !== 'authorised' &&
+  job.paymentStatus !== 'paid';
 
 /**
  * How each status looks. Colour carries the state so a driver scanning the
@@ -135,18 +186,18 @@ export const STATUS_STYLE: Record<JobStatus, { label: string; border: string; ch
   },
   accepted: {
     label: 'Accepted',
-    border: 'border-[var(--color-navy-400)]',
-    chip: 'bg-[var(--color-navy-700)] text-white',
+    border: 'border-[var(--color-accent-400)]',
+    chip: 'bg-[var(--color-accent-700)] text-white',
   },
   en_route: {
     label: 'On the way',
-    border: 'border-yellow-400',
-    chip: 'bg-yellow-400 text-neutral-950',
+    border: 'border-accent-400',
+    chip: 'bg-accent-400 text-neutral-950',
   },
   on_scene: {
     label: 'On scene',
-    border: 'border-yellow-400',
-    chip: 'bg-yellow-400 text-neutral-950',
+    border: 'border-accent-400',
+    chip: 'bg-accent-400 text-neutral-950',
   },
   complete: {
     label: 'Done',

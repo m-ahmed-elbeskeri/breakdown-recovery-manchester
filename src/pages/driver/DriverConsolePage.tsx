@@ -10,13 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell, Star } from '../../icons';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../auth';
-import {
-  Banner,
-  BlockerList,
-  ErrorNotice,
-  Loading,
-  PrimaryButton,
-} from '../../components/console';
+import { Banner, BlockerList, ErrorNotice, Loading, PrimaryButton } from '../../components/console';
 import { InstallApp } from '../../components/InstallApp';
 import {
   agoLabel,
@@ -24,7 +18,10 @@ import {
   fetchMyJobs,
   fetchMyProfile,
   mapsUrl,
+  needsPaymentOnScene,
   NEXT_STATUS,
+  depositHeld,
+  paymentLine,
   setMyJobStatus,
   setMyState,
   STATUS_STYLE,
@@ -35,6 +32,7 @@ import {
 } from '../../driver';
 import { formatDate, type DriverProfile } from '../../driverDocs';
 import { serviceLabel } from '../../data';
+import { fetchPaymentsConfig, formatPence } from '../../payments';
 import { useNoIndex } from '../../seo';
 import { DriverShell } from './DriverShell';
 
@@ -116,12 +114,19 @@ export function DriverConsolePage() {
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('mine');
   const [confirmHandBack, setConfirmHandBack] = useState<number | null>(null);
+  // A card job nobody paid for, waiting on "did the customer pay you?".
+  const [confirmInPerson, setConfirmInPerson] = useState<number | null>(null);
+  const [feePercent, setFeePercent] = useState<number | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [notifyPermission, setNotifyPermission] = useState<NotificationPermission | 'unsupported'>(
     () => ('Notification' in window ? Notification.permission : 'unsupported'),
   );
 
   const lastSent = useRef(0);
+
+  useEffect(() => {
+    void fetchPaymentsConfig().then((config) => setFeePercent(config.feePercent));
+  }, []);
   const previousJobs = useRef<Job[] | null>(null);
   const me = profile?.live ?? null;
   const meId = profile?.id ?? null;
@@ -241,12 +246,28 @@ export function DriverConsolePage() {
       updateLive(await setMyState({ busyMinutes: next }));
     });
 
-  const advance = (job: Job) =>
-    run(async () => {
-      const step = NEXT_STATUS[job.status];
-      if (!step) return;
+  const advance = (job: Job) => {
+    const step = NEXT_STATUS[job.status];
+    if (!step) return;
+    // Nobody has paid for this card job: ask whether the customer paid on the day.
+    if (step.next === 'complete' && needsPaymentOnScene(job)) {
+      setConfirmInPerson(job.id);
+      return;
+    }
+    return run(async () => {
       try {
         await setMyJobStatus(job.id, step.next as Exclude<JobStatus, 'cancelled'>);
+      } finally {
+        await load();
+      }
+    });
+  };
+
+  const finish = (job: Job, paidInPerson: boolean) =>
+    run(async () => {
+      setConfirmInPerson(null);
+      try {
+        await setMyJobStatus(job.id, 'complete', paidInPerson);
       } finally {
         await load();
       }
@@ -292,7 +313,7 @@ export function DriverConsolePage() {
           role="status"
           className={`border-2 px-4 py-3 flex items-start gap-3 ${
             alert.kind === 'new'
-              ? 'border-yellow-400 bg-yellow-400 text-neutral-950'
+              ? 'border-accent-400 bg-accent-400 text-neutral-950'
               : 'border-[var(--color-danger)] bg-[var(--color-danger)] text-white'
           }`}
         >
@@ -345,7 +366,7 @@ export function DriverConsolePage() {
           onClick={() => void askNotifications()}
           className="border-2 border-neutral-800 bg-neutral-900 px-4 py-3 text-left flex items-center gap-3"
         >
-          <Bell className="w-5 h-5 text-yellow-400 shrink-0" />
+          <Bell className="w-5 h-5 text-accent-400 shrink-0" />
           <span className="text-sm">
             <span className="font-bold block">Turn on job alerts</span>
             <span className="text-neutral-400 text-[12px]">
@@ -357,7 +378,7 @@ export function DriverConsolePage() {
 
       {/* ── On duty ─────────────────────────────────────────────────── */}
       <section
-        className={`border-2 p-5 ${me.available ? 'border-yellow-400 bg-yellow-400/10' : 'border-neutral-800 bg-neutral-900'}`}
+        className={`border-2 p-5 ${me.available ? 'border-accent-400 bg-accent-400/10' : 'border-neutral-800 bg-neutral-900'}`}
       >
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -378,7 +399,7 @@ export function DriverConsolePage() {
             className={`shrink-0 px-5 py-3.5 font-display uppercase tracking-wider border-2 disabled:opacity-40 ${
               me.available
                 ? 'bg-neutral-950 text-white border-neutral-700'
-                : 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                : 'bg-accent-400 text-neutral-950 border-accent-400'
             }`}
           >
             {me.available ? 'Go off' : 'Go on'}
@@ -392,13 +413,13 @@ export function DriverConsolePage() {
             {me.busyMinutes > 0 ? (
               <>
                 Free again in about{' '}
-                <strong className="text-yellow-400 font-display text-base">
+                <strong className="text-accent-400 font-display text-base">
                   {me.busyMinutes} min
                 </strong>
               </>
             ) : (
               <>
-                Free <strong className="text-yellow-400">now</strong>
+                Free <strong className="text-accent-400">now</strong>
               </>
             )}
           </p>
@@ -444,7 +465,7 @@ export function DriverConsolePage() {
             aria-pressed={filter === f.key}
             className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider border-2 transition-colors ${
               filter === f.key
-                ? 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                ? 'bg-accent-400 text-neutral-950 border-accent-400'
                 : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
             }`}
           >
@@ -481,6 +502,10 @@ export function DriverConsolePage() {
                 busy={busy}
                 takeBlocked={takeBlocked}
                 confirmingHandBack={confirmHandBack === job.id}
+                confirmingInPerson={confirmInPerson === job.id}
+                feePercent={feePercent}
+                onFinish={(paidInPerson) => void finish(job, paidInPerson)}
+                onCancelInPerson={() => setConfirmInPerson(null)}
                 onAdvance={() => void advance(job)}
                 onAskHandBack={() => setConfirmHandBack(job.id)}
                 onCancelHandBack={() => setConfirmHandBack(null)}
@@ -500,6 +525,10 @@ function JobCard({
   busy,
   takeBlocked,
   confirmingHandBack,
+  confirmingInPerson,
+  feePercent,
+  onFinish,
+  onCancelInPerson,
   onAdvance,
   onAskHandBack,
   onCancelHandBack,
@@ -510,6 +539,10 @@ function JobCard({
   busy: boolean;
   takeBlocked: string | null;
   confirmingHandBack: boolean;
+  confirmingInPerson: boolean;
+  feePercent: number | null;
+  onFinish: (paidInPerson: boolean) => void;
+  onCancelInPerson: () => void;
   onAdvance: () => void;
   onAskHandBack: () => void;
   onCancelHandBack: () => void;
@@ -548,13 +581,13 @@ function JobCard({
               </span>
               {job.rating !== null && (
                 <span
-                  className="inline-flex items-center gap-0.5 text-yellow-400"
+                  className="inline-flex items-center gap-0.5 text-accent-400"
                   aria-label={`Rated ${job.rating} out of 5`}
                 >
                   {[1, 2, 3, 4, 5].map((n) => (
                     <Star
                       key={n}
-                      className={`w-3 h-3 ${n <= (job.rating ?? 0) ? 'fill-yellow-400' : 'opacity-30'}`}
+                      className={`w-3 h-3 ${n <= (job.rating ?? 0) ? 'fill-accent-400' : 'opacity-30'}`}
                     />
                   ))}
                 </span>
@@ -562,7 +595,7 @@ function JobCard({
             </div>
           </div>
           <div
-            className={`font-display text-2xl leading-none shrink-0 ${finished ? 'text-neutral-500' : 'text-yellow-400'}`}
+            className={`font-display text-2xl leading-none shrink-0 ${finished ? 'text-neutral-500' : 'text-accent-400'}`}
           >
             {job.price !== null ? `£${job.price}` : '—'}
           </div>
@@ -572,7 +605,9 @@ function JobCard({
           <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
             When
           </dt>
-          <dd className={`font-bold ${job.timing === 'later' && !finished ? 'text-yellow-400' : ''}`}>
+          <dd
+            className={`font-bold ${job.timing === 'later' && !finished ? 'text-accent-400' : ''}`}
+          >
             {whenLabel(job)}
           </dd>
           <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
@@ -583,7 +618,7 @@ function JobCard({
               href={mapsUrl(job)}
               target="_blank"
               rel="noreferrer"
-              className="text-yellow-400 underline font-medium break-words"
+              className="text-accent-400 underline font-medium break-words"
             >
               {job.location}
             </a>
@@ -614,7 +649,7 @@ function JobCard({
             {job.phone ? (
               <a
                 href={`tel:${job.phone.replace(/[^\d+]/g, '')}`}
-                className="text-yellow-400 underline font-medium"
+                className="text-accent-400 underline font-medium"
               >
                 {job.phone}
               </a>
@@ -622,6 +657,41 @@ function JobCard({
               <span className="text-neutral-500">Shown once you take the job</span>
             )}
           </dd>
+          {job.price !== null && (
+            <>
+              <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
+                Payment
+              </dt>
+              <dd className="font-bold">{paymentLine(job)}</dd>
+            </>
+          )}
+          {mine && job.price !== null && feePercent !== null && (
+            <>
+              <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
+                You get
+              </dt>
+              <dd>
+                {job.driverNetPence !== null
+                  ? formatPence(job.driverNetPence)
+                  : `about £${((job.price * (100 - feePercent)) / 100).toFixed(2).replace(/\.00$/, '')}`}
+                {job.paymentMethod === 'cash' &&
+                  (depositHeld(job) ? (
+                    <span className="block text-[11px] text-neutral-500">
+                      The customer&apos;s card deposit is our {feePercent}% cut. Collect the rest in
+                      cash and nothing is owed either way.
+                    </span>
+                  ) : (
+                    job.paymentStatus !== 'paid_in_person' &&
+                    job.paymentStatus !== 'deposit_paid' && (
+                      <span className="block text-[11px] text-neutral-500">
+                        No deposit was paid, so collect the full price. The {feePercent}% cut comes
+                        off your next card job.
+                      </span>
+                    )
+                  ))}
+              </dd>
+            </>
+          )}
           {job.distanceMiles !== null && (
             <>
               <dt className="text-neutral-500 text-xs font-bold uppercase tracking-wider pt-0.5">
@@ -643,10 +713,42 @@ function JobCard({
         </dl>
 
         {takeBlocked && job.status === 'pending' && (
-          <p className="text-[12px] font-bold text-yellow-400">{takeBlocked}</p>
+          <p className="text-[12px] font-bold text-accent-400">{takeBlocked}</p>
         )}
 
-        {confirmingHandBack ? (
+        {confirmingInPerson ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-[12px] font-bold text-neutral-300">
+              No card payment has gone through for #{job.id}. Did the customer pay you
+              {job.price !== null ? ` £${job.price}` : ''} on the day?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => onFinish(true)}
+                disabled={busy}
+                className="flex-1 bg-accent-400 text-neutral-950 font-display py-3 uppercase tracking-wider text-sm disabled:opacity-50"
+              >
+                Yes, they paid me
+              </button>
+              <button
+                type="button"
+                onClick={() => onFinish(false)}
+                disabled={busy}
+                className="flex-1 bg-neutral-800 text-white font-display py-3 uppercase tracking-wider text-sm disabled:opacity-50"
+              >
+                Try their card
+              </button>
+              <button
+                type="button"
+                onClick={onCancelInPerson}
+                className="px-3 py-3 border-2 border-neutral-800 text-neutral-400 hover:text-white font-display uppercase tracking-wider text-xs"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        ) : confirmingHandBack ? (
           <div className="flex gap-2 items-center">
             <span className="text-[12px] font-bold text-neutral-300 flex-1">
               Hand #{job.id} back for another driver?
@@ -683,7 +785,7 @@ function JobCard({
                   type="button"
                   onClick={onAdvance}
                   disabled={busy || Boolean(takeBlocked)}
-                  className="flex-1 bg-yellow-400 text-neutral-950 font-display py-3 uppercase tracking-wider text-sm disabled:opacity-40"
+                  className="flex-1 bg-accent-400 text-neutral-950 font-display py-3 uppercase tracking-wider text-sm disabled:opacity-40"
                 >
                   {step.label}
                 </button>

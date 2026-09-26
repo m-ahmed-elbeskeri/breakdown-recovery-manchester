@@ -10,10 +10,11 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import audit, models, schemas
+from . import audit, models, payments, schemas
 from .admin import router as admin_router
 from .analytics import BOOKING_FUNNEL as FUNNEL
 from .analytics import router as analytics_router
+from .payments_routes import router as payments_router
 from .auth import require_admin, revoke_sessions
 from .auth import router as auth_router
 from .config import settings
@@ -53,6 +54,7 @@ app.include_router(auth_router)
 app.include_router(drivers_router)
 app.include_router(admin_router)
 app.include_router(analytics_router)
+app.include_router(payments_router)
 
 
 @app.get("/api/health")
@@ -99,7 +101,12 @@ def create_booking(
     ).first()
     if existing is not None:
         return schemas.BookingCreated(
-            bookingId=existing.id, eta=eta, etaSource=eta_source, trackToken=existing.track_token
+            bookingId=existing.id,
+            eta=eta,
+            etaSource=eta_source,
+            trackToken=existing.track_token,
+            paymentMethod=existing.payment_method,
+            depositPence=existing.deposit_pence,
         )
 
     booking = models.Booking(
@@ -121,6 +128,10 @@ def create_booking(
         price=payload.price,
         status="pending",
     )
+    # Card, or cash with the platform's cut as a card deposit, only when card
+    # payments are switched on and a price is agreed. Otherwise the customer
+    # pays the driver in full, as always.
+    payments.set_method(booking, payload.paymentMethod)
     db.add(booking)
     try:
         db.commit()
@@ -132,7 +143,12 @@ def create_booking(
         if existing is None:
             raise
         return schemas.BookingCreated(
-            bookingId=existing.id, eta=eta, etaSource=eta_source, trackToken=existing.track_token
+            bookingId=existing.id,
+            eta=eta,
+            etaSource=eta_source,
+            trackToken=existing.track_token,
+            paymentMethod=existing.payment_method,
+            depositPence=existing.deposit_pence,
         )
     db.refresh(booking)
 
@@ -156,7 +172,12 @@ def create_booking(
     }
     background.add_task(send_booking_notification, details)
     return schemas.BookingCreated(
-        bookingId=booking.id, eta=eta, etaSource=eta_source, trackToken=booking.track_token
+        bookingId=booking.id,
+        eta=eta,
+        etaSource=eta_source,
+        trackToken=booking.track_token,
+        paymentMethod=booking.payment_method,
+        depositPence=booking.deposit_pence,
     )
 
 
@@ -373,6 +394,11 @@ def _track_out(db: Session, b: models.Booking) -> schemas.TrackOut:
         cancelledBy=b.cancelled_by,
         rating=b.rating,
         canCancel=b.status in ("pending", "accepted", "en_route"),
+        paymentMethod=b.payment_method or "cash",
+        paymentStatus=b.payment_status or "none",
+        cardAvailable=payments.card_available(b) and (b.payment_status or "none") not in payments.SETTLED,
+        depositPence=b.deposit_pence if b.payment_method == "cash" else None,
+        cashToCollectPence=payments.cash_to_collect(b),
     )
 
 
@@ -402,6 +428,7 @@ def cancel_booking(token: str, db: Session = Depends(get_db)) -> schemas.TrackOu
     booking.cancelled_by = "customer"
     booking.finished_at = now()
     release_holder(db, booking.id)
+    payments.on_job_cancelled(db, booking)
     db.commit()
     db.refresh(booking)
     return _track_out(db, booking)

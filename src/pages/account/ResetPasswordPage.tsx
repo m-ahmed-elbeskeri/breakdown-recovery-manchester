@@ -81,7 +81,7 @@ export function ResetPasswordPage() {
           : 'Pick something you will remember. A short phrase works well.'
       }
       footer={
-        <Link to="/login" className="text-yellow-400 underline font-bold">
+        <Link to="/login" className="text-accent-400 underline font-bold">
           Back to sign in
         </Link>
       }

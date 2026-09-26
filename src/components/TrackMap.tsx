@@ -18,8 +18,8 @@ export interface MapPoint {
 const PIN = L.divIcon({
   className: '',
   html: `<svg viewBox="0 0 48 48" width="40" height="40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z" fill="#f5c518" stroke="#0e151d" stroke-width="3" stroke-linejoin="round"/>
-    <circle cx="24" cy="20" r="5" fill="#0e151d"/>
+    <path d="M24 46 C20.5 40.5 9 31 9 20 A15 15 0 1 1 39 20 C39 31 27.5 40.5 24 46 Z" fill="#f5c518" stroke="#111418" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="24" cy="20" r="5" fill="#111418"/>
   </svg>`,
   iconSize: [40, 40],
   iconAnchor: [20, 38],
@@ -27,7 +27,7 @@ const PIN = L.divIcon({
 
 const TRUCK = L.divIcon({
   className: '',
-  html: `<div style="width:36px;height:36px;border-radius:50%;background:#0d2038;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center">
+  html: `<div style="width:36px;height:36px;border-radius:50%;background:#111418;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f5c518" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M8 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0M14 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/>
       <path d="M2 17V6a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v11M14 9h4l3 4v4h-3M2 17h6M12 17h2"/>
@@ -106,7 +106,7 @@ export default function TrackMap({
   return (
     <div
       ref={el}
-      className="h-64 sm:h-80 w-full bg-neutral-900 border-2 border-neutral-800"
+      className="h-64 sm:h-80 w-full bg-slate-50 border-2 border-slate-200"
       role="region"
       aria-label="Map showing your pickup and, once on the way, your driver"
     />

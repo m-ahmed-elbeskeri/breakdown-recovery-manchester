@@ -191,6 +191,7 @@ def set_job_status(
     driver: models.Driver | None,
     actor: models.User | None,
     by_admin: bool,
+    paid_in_person: bool = False,
 ) -> None:
     if status == "pending":
         release_job(db, booking, actor=actor, driver=driver, by_admin=by_admin)
@@ -265,12 +266,25 @@ def set_job_status(
                 )
             if driver is None or booking.driver_id != driver.id or booking.status not in ACTIVE_STATUSES:
                 raise HTTPException(status_code=409, detail="That job isn't yours to finish.")
+            if status == "complete":
+                from . import payments
+
+                payments.check_can_complete(booking, paid_in_person=paid_in_person)
         booking.finished_at = booking.finished_at or moment
         if status == "cancelled" and booking.cancelled_by is None:
             booking.cancelled_by = "office"
         release_holder(db, booking.id)
 
     booking.status = status
+    if status in FINISHED_STATUSES:
+        # Take the card payment, or record the cut owed on a cash job, or let
+        # go of a hold on a cancelled one. Never stops the job being closed.
+        from . import payments
+
+        if status == "complete":
+            payments.on_job_complete(db, booking, actor=actor, paid_in_person=paid_in_person)
+        else:
+            payments.on_job_cancelled(db, booking)
     audit.record(
         db,
         actor,

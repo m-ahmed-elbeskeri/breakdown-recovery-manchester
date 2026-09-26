@@ -142,7 +142,7 @@ export function PlaceInput({
           id={listId}
           role="listbox"
           aria-label={`${ariaLabel} suggestions`}
-          className="absolute z-30 left-0 right-0 top-full mt-1 bg-neutral-950 border-2 border-yellow-400 max-h-64 overflow-y-auto shadow-xl"
+          className="absolute z-30 left-0 right-0 top-full mt-1.5 bg-white border border-accent-200 max-h-64 overflow-y-auto shadow-xl"
         >
           {suggestions.map((s, i) => (
             <li
@@ -157,8 +157,8 @@ export function PlaceInput({
                 choose(s);
               }}
               onMouseEnter={() => setActive(i)}
-              className={`px-4 py-2.5 text-sm cursor-pointer border-b border-neutral-800 last:border-b-0 ${
-                i === active ? 'bg-yellow-400 text-neutral-950 font-bold' : 'text-white'
+              className={`px-4 py-2.5 text-sm cursor-pointer border-b border-slate-200 last:border-b-0 ${
+                i === active ? 'bg-accent-400 text-neutral-950 font-bold' : 'text-slate-950'
               }`}
             >
               {s.label}

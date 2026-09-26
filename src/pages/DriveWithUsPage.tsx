@@ -26,7 +26,7 @@ function ApplyButton({ className = '' }: { className?: string }) {
     <Link
       to={APPLY_PATH}
       data-track="recruit-apply"
-      className={`inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display px-8 py-4 uppercase tracking-wider text-lg shadow-md hover:shadow-lg ${className}`}
+      className={`inline-flex items-center gap-2 bg-accent-400 hover:bg-accent-300 text-neutral-950 font-display px-8 py-4 uppercase tracking-wider text-lg shadow-md hover:shadow-lg ${className}`}
     >
       Apply to drive <ArrowRight className="w-5 h-5" />
     </Link>
@@ -40,23 +40,23 @@ export function DriveWithUsPage() {
   usePageSeo(seo);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-yellow-400 selection:text-neutral-950">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-accent-400 selection:text-neutral-950">
       <UrgencyBar regionName={HOME_REGION} />
       <Header regionName={HOME_REGION} bookTo="/" />
       <main>
-        <section className="bg-neutral-950 text-white border-b-4 border-yellow-400 py-12 sm:py-20 px-4">
+        <section className="bg-white text-slate-950 border-b-4 border-accent-400 py-12 sm:py-20 px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="text-xs font-black tracking-[0.3em] uppercase text-yellow-400 mb-3">
+            <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-3">
               Recovery driver jobs · Greater Manchester
             </div>
             <h1 className="font-display text-5xl sm:text-7xl tracking-tight leading-none">
               DRIVE WITH US.
               <br />
-              <span className="inline-block mt-2 px-3 pt-1 pb-1.5 bg-yellow-400 text-neutral-950">
+              <span className="inline-block mt-2 px-3 pt-1 pb-1.5 bg-accent-400 text-slate-950">
                 YOUR HOURS.
               </span>
             </h1>
-            <p className="text-lg text-neutral-300 font-medium mt-6">
+            <p className="text-lg text-slate-600 font-medium mt-6">
               Jobs come to your phone with the pickup, the drop-off and the price already worked
               out. Go on duty when you want to work, and take the jobs that suit you.
             </p>
@@ -64,7 +64,7 @@ export function DriveWithUsPage() {
               <ApplyButton />
               <Link
                 to="/login"
-                className="text-sm font-bold uppercase tracking-wider text-neutral-300 hover:text-yellow-400 underline"
+                className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-slate-600 underline"
               >
                 Already applied? Sign in
               </Link>
@@ -88,8 +88,8 @@ export function DriveWithUsPage() {
             <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {RECRUIT_STEPS.map((step, i) => (
                 <Reveal key={step.title} delay={i * 0.06} className="h-full">
-                  <li className="h-full bg-slate-50 border-2 border-slate-200 p-5 flex flex-col gap-3">
-                    <span className="w-10 h-10 bg-neutral-950 text-yellow-400 font-display text-xl flex items-center justify-center">
+                  <li className="h-full bg-white border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
+                    <span className="w-10 h-10 bg-accent-400 text-neutral-950 font-display text-xl flex items-center justify-center">
                       {i + 1}
                     </span>
                     <h3 className="font-sans font-extrabold text-lg tracking-tight">
@@ -117,7 +117,7 @@ export function DriveWithUsPage() {
               <ul className="space-y-3">
                 {REQUIREMENTS.map((line) => (
                   <li key={line} className="flex items-start gap-3 text-slate-700 font-medium">
-                    <CheckCircle2 className="w-5 h-5 text-neutral-950 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-slate-950 shrink-0 mt-0.5" />
                     <span>{line}</span>
                   </li>
                 ))}
@@ -130,7 +130,7 @@ export function DriveWithUsPage() {
               <div className="flex flex-col gap-5">
                 {DOCUMENT_GROUPS.map((group) => (
                   <div key={group.heading}>
-                    <h3 className="text-xs font-black tracking-[0.2em] uppercase text-red-600 mb-2">
+                    <h3 className="text-xs font-black tracking-[0.2em] uppercase text-slate-950 mb-2">
                       {group.heading}
                     </h3>
                     <ul className="text-slate-700 font-medium text-sm space-y-1.5">
@@ -145,13 +145,13 @@ export function DriveWithUsPage() {
           </div>
         </section>
 
-        <section className="py-12 sm:py-16 px-4 bg-navy-900 text-white">
+        <section className="py-12 sm:py-16 px-4 bg-white text-slate-950">
           <div className="max-w-3xl mx-auto">
             <Reveal>
               <h2 className="font-sans font-extrabold text-3xl md:text-4xl tracking-tight mb-6">
                 Why we check so much
               </h2>
-              <p className="text-blue-100 font-medium leading-relaxed">
+              <p className="text-slate-600 font-medium leading-relaxed">
                 Customers book us at the side of the road, often at night, and hand their car to
                 whoever turns up. They see your name, your photo and your registration before you
                 arrive. Checking every driver properly is what lets them trust that, and it is what
@@ -168,11 +168,11 @@ export function DriveWithUsPage() {
           intro="What drivers ask before they apply."
         />
 
-        <section className="py-14 px-4 bg-neutral-950 text-center">
-          <h2 className="font-display text-4xl md:text-5xl text-white tracking-tight">
+        <section className="py-14 px-4 bg-slate-100 border-y border-slate-200 text-center">
+          <h2 className="font-display text-4xl md:text-5xl text-slate-950 tracking-tight">
             Start your application.
           </h2>
-          <p className="text-neutral-400 font-medium mt-4">
+          <p className="text-slate-600 font-medium mt-4">
             It saves as you go, so you can finish it tonight.
           </p>
           <ApplyButton className="mt-8" />

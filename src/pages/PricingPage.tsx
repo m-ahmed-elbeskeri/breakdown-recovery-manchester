@@ -24,19 +24,19 @@ export function PricingPage() {
   usePageSeo(seo);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-yellow-400 selection:text-neutral-950">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-accent-400 selection:text-neutral-950">
       <UrgencyBar regionName={HOME_REGION} />
       <Header regionName={HOME_REGION} bookTo="/" />
       <main>
         <section className="bg-white border-b border-slate-200 py-12 sm:py-20 px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="text-xs font-black tracking-[0.3em] uppercase text-red-600 mb-3">
+            <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-3">
               Prices
             </div>
             <h1 className="font-display text-5xl sm:text-7xl tracking-tight leading-none">
               WHAT IT COSTS.
               <br />
-              <span className="inline-block mt-2 px-3 pt-1 pb-1.5 bg-yellow-400 text-neutral-950">
+              <span className="inline-block mt-2 px-3 pt-1 pb-1.5 bg-accent-400 text-neutral-950">
                 ALL OF IT.
               </span>
             </h1>
@@ -47,7 +47,7 @@ export function PricingPage() {
             </p>
             <Link
               to="/"
-              className="mt-8 inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display px-8 py-4 uppercase tracking-wider text-lg shadow-md hover:shadow-lg"
+              className="mt-8 inline-flex items-center gap-2 bg-accent-400 hover:bg-accent-300 text-neutral-950 font-display px-8 py-4 uppercase tracking-wider text-lg shadow-md hover:shadow-lg"
             >
               Get your price <ArrowRight className="w-5 h-5" />
             </Link>
@@ -63,10 +63,10 @@ export function PricingPage() {
               >
                 The tariff
               </h2>
-              <div className="overflow-x-auto border-2 border-slate-950 bg-white">
+              <div className="overflow-x-auto border border-slate-200 shadow-sm bg-white">
                 <table className="w-full text-sm sm:text-base">
                   <thead>
-                    <tr className="bg-neutral-950 text-white text-left text-[11px] uppercase tracking-[0.15em]">
+                    <tr className="bg-slate-100 text-slate-700 text-left text-[11px] uppercase tracking-[0.15em]">
                       <th className="p-4 font-bold">Item</th>
                       <th className="p-4 font-bold whitespace-nowrap">Price</th>
                       <th className="p-4 font-bold hidden sm:table-cell">Notes</th>
@@ -81,7 +81,7 @@ export function PricingPage() {
                             {row.note}
                           </span>
                         </td>
-                        <td className="p-4 font-display text-xl text-navy-700 whitespace-nowrap">
+                        <td className="p-4 font-display text-xl text-slate-950 whitespace-nowrap">
                           {row.price}
                         </td>
                         <td className="p-4 text-slate-600 font-medium hidden sm:table-cell">
@@ -97,12 +97,12 @@ export function PricingPage() {
         </section>
 
         <section
-          className="py-12 sm:py-16 px-4 bg-navy-900 text-white"
+          className="py-12 sm:py-16 px-4 bg-white text-slate-950"
           aria-labelledby="examples-heading"
         >
           <div className="max-w-6xl mx-auto">
             <Reveal className="text-center max-w-3xl mx-auto mb-10">
-              <div className="text-xs font-black tracking-[0.3em] uppercase text-yellow-400 mb-3">
+              <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-3">
                 Worked examples
               </div>
               <h2
@@ -111,19 +111,19 @@ export function PricingPage() {
               >
                 What real jobs come to
               </h2>
-              <p className="text-blue-100 font-medium mt-4">
+              <p className="text-slate-600 font-medium mt-4">
                 Calculated with the same formula the booking form uses, rounded to the nearest £5.
               </p>
             </Reveal>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {EXAMPLES.map((ex, i) => (
                 <Reveal key={ex.title} delay={i * 0.06} className="h-full">
-                  <div className="h-full bg-navy-800 border border-white/10 p-5 flex flex-col">
+                  <div className="h-full bg-slate-50 border border-slate-200 p-5 flex flex-col">
                     <div className="font-sans font-extrabold text-lg tracking-tight">
                       {ex.title}
                     </div>
-                    <p className="text-blue-200 text-sm font-medium mt-1 flex-1">{ex.detail}</p>
-                    <div className="font-display text-4xl text-yellow-400 mt-4">£{ex.price}</div>
+                    <p className="text-slate-600 text-sm font-medium mt-1 flex-1">{ex.detail}</p>
+                    <div className="font-display text-4xl text-slate-950 mt-4">£{ex.price}</div>
                   </div>
                 </Reveal>
               ))}
@@ -149,7 +149,7 @@ export function PricingPage() {
                   'Nothing is added afterwards. Card or cash to the driver when the job is done, and nothing to pay if you cancel before the driver is on scene.',
                 ].map((line) => (
                   <li key={line} className="flex items-start gap-3 text-slate-700 font-medium">
-                    <CheckCircle2 className="w-5 h-5 text-neutral-950 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-slate-950 shrink-0 mt-0.5" />
                     <span>{line}</span>
                   </li>
                 ))}
@@ -165,13 +165,13 @@ export function PricingPage() {
           intro="What people ask before they book."
         />
 
-        <section className="py-14 px-4 bg-navy-900 text-center">
-          <h2 className="font-display text-4xl md:text-5xl text-white tracking-tight">
+        <section className="py-14 px-4 bg-slate-100 border-y border-slate-200 text-center">
+          <h2 className="font-display text-4xl md:text-5xl text-slate-950 tracking-tight">
             See your price in a minute.
           </h2>
           <Link
             to="/"
-            className="mt-8 inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display px-8 py-4 uppercase tracking-wider text-lg shadow-md hover:shadow-lg"
+            className="mt-8 inline-flex items-center gap-2 bg-accent-400 hover:bg-accent-300 text-neutral-950 font-display px-8 py-4 uppercase tracking-wider text-lg shadow-md hover:shadow-lg"
           >
             Get your price <ArrowRight className="w-5 h-5" />
           </Link>

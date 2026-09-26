@@ -222,7 +222,7 @@ function DetailsCard({
         <button
           type="button"
           onClick={() => setEditing((e) => !e)}
-          className="text-xs font-bold uppercase tracking-wider text-yellow-400 underline"
+          className="text-xs font-bold uppercase tracking-wider text-accent-400 underline"
         >
           {editing ? 'Cancel' : 'Edit'}
         </button>
@@ -435,7 +435,7 @@ function LicenceCheck({
         <button
           type="button"
           onClick={() => setEditing((e) => !e)}
-          className="text-xs font-bold uppercase tracking-wider text-yellow-400 underline"
+          className="text-xs font-bold uppercase tracking-wider text-accent-400 underline"
         >
           {editing ? 'Cancel' : 'Edit'}
         </button>
@@ -462,14 +462,14 @@ function LicenceCheck({
       <div className="mt-4 border-t-2 border-neutral-800 pt-4 flex flex-col gap-3">
         {profile.licenceCheckedAt ? (
           <p
-            className={`text-sm font-bold ${stale ? 'text-yellow-400' : 'text-[var(--color-success)]'}`}
+            className={`text-sm font-bold ${stale ? 'text-accent-400' : 'text-[var(--color-success)]'}`}
           >
             Checked {formatDate(profile.licenceCheckedAt)}
             {since !== null ? ` (${since === 0 ? 'today' : `${since} day${since === 1 ? '' : 's'} ago`})` : ''}
             {stale ? '. Check again before approving.' : ''}
           </p>
         ) : (
-          <p className="text-sm font-bold text-yellow-400">Not checked with DVLA yet.</p>
+          <p className="text-sm font-bold text-accent-400">Not checked with DVLA yet.</p>
         )}
         <ol className="list-decimal list-outside pl-5 text-[13px] text-neutral-400 flex flex-col gap-1.5">
           <li>
@@ -478,7 +478,7 @@ function LicenceCheck({
               href="https://www.gov.uk/view-driving-licence"
               target="_blank"
               rel="noreferrer"
-              className="text-yellow-400 underline"
+              className="text-accent-400 underline"
             >
               gov.uk/view-driving-licence
             </a>
@@ -491,7 +491,7 @@ function LicenceCheck({
               href="https://www.gov.uk/check-driving-information"
               target="_blank"
               rel="noreferrer"
-              className="text-yellow-400 underline"
+              className="text-accent-400 underline"
             >
               gov.uk/check-driving-information
             </a>
@@ -762,7 +762,7 @@ function EarlierCopies({ docs }: { docs: DocumentInfo[] }) {
             <button
               type="button"
               onClick={() => setViewing(d)}
-              className="text-xs font-bold uppercase tracking-wider text-yellow-400 underline shrink-0"
+              className="text-xs font-bold uppercase tracking-wider text-accent-400 underline shrink-0"
             >
               View
             </button>

@@ -32,6 +32,16 @@ driver positions and customer tracking.
   cancel, and rate the job afterwards.
 - **Accounts.** Everyone signs in as themselves at `/login`, with password
   reset by email. No shared keys.
+- **Payments** (Stripe Connect). Customers choose card or cash. **Card:** the
+  full price is held at booking and charged when the job is done; the
+  platform keeps its cut and the driver's share is sent to their Stripe
+  account. **Cash:** the platform's cut is paid as a card deposit (held, then
+  taken when the job is done) and the rest goes to the driver in cash. If no
+  deposit was paid, the driver collects the full price and the cut is taken
+  from their next card job. Drivers cash out
+  from **Earnings**, free in a few days or instantly for Stripe's 1%. The
+  office sees takings, balances and refunds under **Admin → Payments**. Off
+  until the Stripe keys are set; see `DEPLOY.md`.
 - **Driver recruitment** at `/drive-with-us`, and a step-by-step application
   at `/drivers/apply`: personal details, licence, vehicle, and every document a
   UK recovery driver needs (right to work, DBS, licence, insurance, V5C, MOT,

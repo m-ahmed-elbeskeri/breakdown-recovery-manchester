@@ -177,7 +177,7 @@ export function AdminAnalytics() {
               aria-pressed={days === r.days}
               className={`px-3 py-1.5 text-[11px] font-black uppercase tracking-wider border-2 ${
                 days === r.days
-                  ? 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                  ? 'bg-accent-400 text-neutral-950 border-accent-400'
                   : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
               }`}
             >
@@ -386,7 +386,7 @@ function KpiGrid({ current, previous, compared }: { current: Kpis; previous: Kpi
             <div className="text-[10px] font-black uppercase tracking-[0.15em] text-neutral-500">
               {card.label}
             </div>
-            <div className="font-display text-3xl text-yellow-400 leading-none mt-1.5 tabular-nums">
+            <div className="font-display text-3xl text-accent-400 leading-none mt-1.5 tabular-nums">
               {fmtKpi(value, card.kind)}
             </div>
             <div className="text-[11px] font-bold mt-2">
@@ -442,13 +442,13 @@ function TrendChart({ series, hourly }: { series: SeriesPoint[]; hourly: boolean
     <Panel title="Visits, bookings and calls" hint="Point at the chart to see a day's figures.">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] font-bold">
         <span className="inline-flex items-center gap-1.5 text-neutral-300">
-          <span className="w-3 h-1 bg-yellow-400" /> Visits
+          <span className="w-3 h-1 bg-accent-400" /> Visits
         </span>
         <span className="inline-flex items-center gap-1.5 text-neutral-300">
           <span className="w-3 h-1 bg-[var(--color-success)]" /> Bookings
         </span>
         <span className="inline-flex items-center gap-1.5 text-neutral-300">
-          <span className="w-3 h-1 bg-[var(--color-navy-300)]" /> Call taps
+          <span className="w-3 h-1 bg-[var(--color-accent-300)]" /> Call taps
         </span>
       </div>
       {point && (
@@ -475,9 +475,9 @@ function TrendChart({ series, hourly }: { series: SeriesPoint[]; hourly: boolean
             </text>
           </g>
         ))}
-        <path d={area} className="fill-yellow-400/15" />
-        <path d={visitorsLine} fill="none" className="stroke-yellow-400" strokeWidth={2.5} />
-        <path d={line((p) => p.calls)} fill="none" stroke="var(--color-navy-300)" strokeWidth={2} />
+        <path d={area} className="fill-accent-400/15" />
+        <path d={visitorsLine} fill="none" className="stroke-accent-400" strokeWidth={2.5} />
+        <path d={line((p) => p.calls)} fill="none" stroke="var(--color-accent-300)" strokeWidth={2} />
         <path d={line((p) => p.bookings)} fill="none" stroke="var(--color-success)" strokeWidth={2.5} />
         {series.map((p, i) =>
           i % labelEvery === 0 ? (
@@ -527,7 +527,7 @@ function Funnel({ title, hint, steps }: { title: string; hint: string; steps: Fu
               </div>
               <div className="h-2 bg-neutral-950 mt-1.5 border border-neutral-800">
                 <div
-                  className={biggest ? 'h-full bg-[var(--color-danger)]' : 'h-full bg-yellow-400'}
+                  className={biggest ? 'h-full bg-[var(--color-danger)]' : 'h-full bg-accent-400'}
                   style={{ width: `${Math.min(100, (step.sessions / top) * 100)}%` }}
                 />
               </div>
@@ -634,7 +634,7 @@ function BarList({ rows, format }: { rows: CountRow[]; format?: (label: string) 
           <div className="min-w-0">
             <div className="text-sm truncate text-neutral-200">{format ? format(r.label) : r.label}</div>
             <div className="h-1.5 bg-neutral-950 mt-1 border border-neutral-800">
-              <div className="h-full bg-yellow-400" style={{ width: `${(r.count / max) * 100}%` }} />
+              <div className="h-full bg-accent-400" style={{ width: `${(r.count / max) * 100}%` }} />
             </div>
           </div>
           <span className="tabular-nums text-sm text-neutral-300">{fmtInt(r.count)}</span>

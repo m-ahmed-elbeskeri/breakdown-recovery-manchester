@@ -86,7 +86,7 @@ export function AdminDrivers() {
             aria-pressed={filter === f.key}
             className={`shrink-0 px-3.5 py-2 text-[11px] font-black uppercase tracking-wider border-2 ${
               filter === f.key
-                ? 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                ? 'bg-accent-400 text-neutral-950 border-accent-400'
                 : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
             }`}
           >
@@ -110,7 +110,7 @@ export function AdminDrivers() {
             <li key={r.id}>
               <Link
                 to={`/admin/drivers/${r.id}`}
-                className="block border-2 border-neutral-800 bg-neutral-900 hover:border-yellow-400 p-4 transition-colors"
+                className="block border-2 border-neutral-800 bg-neutral-900 hover:border-accent-400 p-4 transition-colors"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -140,13 +140,13 @@ export function AdminDrivers() {
                     </span>
                   )}
                   {r.pendingDocs > 0 && (
-                    <span className="text-[var(--color-navy-300)] font-bold">
+                    <span className="text-[var(--color-accent-300)] font-bold">
                       {r.pendingDocs} to check
                     </span>
                   )}
                   {r.missingDocs > 0 && <span>{r.missingDocs} missing</span>}
                   {r.expiringDocs > 0 && (
-                    <span className="text-yellow-400 font-bold">{r.expiringDocs} expiring</span>
+                    <span className="text-accent-400 font-bold">{r.expiringDocs} expiring</span>
                   )}
                   {r.expiredDocs > 0 && (
                     <span className="text-[var(--color-danger-soft)] font-bold">

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { whenLabel, diffJobs, type Job } from './driver';
+import { whenLabel, diffJobs, paymentLine, type Job } from './driver';
+import { cashSplit, formatPounds } from './payments';
 
 describe('whenLabel', () => {
   it('says ASAP for a job wanted now', () => {
@@ -20,6 +21,12 @@ describe('whenLabel', () => {
 
 const job = (over: Partial<Job>): Job => ({
   id: 1,
+  paymentMethod: 'cash',
+  paymentStatus: 'none',
+  amountPaidPence: null,
+  platformFeePence: null,
+  driverNetPence: null,
+  refundedPence: 0,
   region: 'Manchester',
   location: 'M1 1AA',
   destination: null,
@@ -81,5 +88,40 @@ describe('diffJobs', () => {
       job({ id: 4, status: 'cancelled', driverId: 5, cancelledBy: 'driver' }),
     ];
     expect(diffJobs(before, after, 5).cancelledOnMe).toEqual([]);
+  });
+});
+
+describe('paying cash with a card deposit', () => {
+  it('splits the price into our cut as a deposit and the rest for the driver', () => {
+    expect(cashSplit(40, 20)).toEqual({ deposit: 800, toDriver: 3200 });
+    expect(cashSplit(95, 20)).toEqual({ deposit: 1900, toDriver: 7600 });
+    expect(formatPounds(800)).toBe('£8');
+    expect(formatPounds(850)).toBe('£8.50');
+  });
+
+  it('tells the driver to collect only the rest when the deposit is held', () => {
+    const held = job({
+      price: 40,
+      depositPence: 800,
+      paymentStatus: 'authorised',
+      cashToCollectPence: 3200,
+    });
+    expect(paymentLine(held)).toBe('Cash · collect £32 (deposit held)');
+  });
+
+  it('tells the driver to collect the full price when no deposit was paid', () => {
+    const unpaid = job({
+      price: 40,
+      depositPence: 800,
+      paymentStatus: 'requires_payment',
+      cashToCollectPence: 4000,
+    });
+    expect(paymentLine(unpaid)).toBe('Cash · collect £40');
+  });
+
+  it('says the job is settled once the deposit is taken', () => {
+    expect(paymentLine(job({ price: 40, paymentStatus: 'deposit_paid' }))).toBe(
+      'Deposit taken · rest paid in cash',
+    );
   });
 });

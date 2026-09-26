@@ -2,17 +2,7 @@
 // hero, the coverage grid, the closing call to action and the footer.
 
 import { Link } from 'react-router-dom';
-import {
-  ArrowRight,
-  PhoneCall,
-  Phone,
-  MapPin,
-  Clock,
-  Pin,
-  Coins,
-  Navigation,
-  Truck,
-} from '../icons';
+import { ArrowRight, PhoneCall, Phone, MapPin, Clock, Truck } from '../icons';
 import { Logo } from './Logo';
 import { Reveal } from './motion';
 import {
@@ -34,18 +24,22 @@ import { FROM_PRICE } from '../pricing';
 export function UrgencyBar({ regionName }: { regionName: string }) {
   return (
     <>
-      <div className="hazard-stripes h-2" aria-hidden="true" />
-      <div className="bg-neutral-950 text-white text-xs sm:text-sm font-bold py-2 sm:py-2.5 px-4 text-center flex items-center justify-center gap-2 tracking-wider uppercase">
+      {/* Sentence case, not shouted capitals: the first line a stranded
+          reader sees should sound like a person, not a siren. */}
+      <div className="bg-neutral-950 text-neutral-200 text-xs sm:text-sm font-medium py-2 sm:py-2.5 px-4 text-center flex items-center justify-center gap-2">
         {/* On a phone this bar sits directly above the live-drivers badge, so it
             states the always-on promise rather than repeating the same count. */}
         <span className="sm:hidden">
-          <span className="text-yellow-400 font-black">24/7</span> Emergency Dispatch{' '}
-          <span className="mx-1 text-yellow-400/60">//</span> {regionName.toUpperCase()}
+          <span className="text-accent-400 font-bold">24/7</span> emergency recovery in {regionName}
         </span>
         <span className="hidden sm:inline">
-          FAST DISPATCH IN {regionName.toUpperCase()}{' '}
-          <span className="mx-1.5 text-yellow-400/60">//</span>{' '}
-          <span className="text-yellow-400 font-black">PRICE UP FRONT · TRACK YOUR DRIVER</span>
+          24/7 recovery in {regionName}
+          <span className="mx-3 text-neutral-600" aria-hidden="true">
+            |
+          </span>
+          <span className="text-accent-400 font-semibold">
+            Your price up front, your driver tracked live
+          </span>
         </span>
       </div>
     </>
@@ -89,7 +83,7 @@ function BookNow({
 
 export function Header({ regionName, bookTo }: { regionName: string; bookTo?: string }) {
   return (
-    <header className="sticky top-0 z-50 bg-white text-slate-950 border-b-2 border-slate-950">
+    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md text-slate-950 border-b border-slate-200 shadow-[0_1px_12px_rgba(14,21,29,0.06)]">
       <div className="max-w-6xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-3 min-w-0">
           <Logo className="w-11 h-11 shrink-0" />
@@ -103,20 +97,20 @@ export function Header({ regionName, bookTo }: { regionName: string; bookTo?: st
         <nav className="hidden md:flex items-center gap-6" aria-label="Site">
           <Link
             to={PRICING_PATH}
-            className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 transition-colors"
+            className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-slate-600 transition-colors"
           >
             Prices
           </Link>
           <Link
             to={RECRUIT_PATH}
             data-track="header-drive"
-            className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 transition-colors"
+            className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-slate-600 transition-colors"
           >
             Drive with us
           </Link>
           <Link
             to="/#services"
-            className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 transition-colors"
+            className="text-sm font-bold uppercase tracking-wider text-slate-600 hover:text-slate-600 transition-colors"
           >
             Services
           </Link>
@@ -127,7 +121,7 @@ export function Header({ regionName, bookTo }: { regionName: string; bookTo?: st
             <a
               href={`tel:${PHONE_TEL}`}
               data-call="header"
-              className="text-2xl font-display text-red-600 hover:text-red-500 transition-colors leading-tight"
+              className="text-2xl font-display text-slate-950 hover:text-slate-600 transition-colors leading-tight"
             >
               {PHONE_DISPLAY}
             </a>
@@ -135,7 +129,7 @@ export function Header({ regionName, bookTo }: { regionName: string; bookTo?: st
           <BookNow
             to={bookTo}
             trackAs="header-book"
-            className="bg-yellow-400 hover:bg-yellow-300 text-neutral-950 px-7 py-3 rounded-none font-bold text-base uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 shadow-sm hover:shadow-md"
+            className="bg-accent-400 hover:bg-accent-300 text-neutral-950 px-6 py-3 rounded-none font-bold text-base tracking-wide transition-all active:scale-95 flex items-center gap-2 shadow-md shadow-accent-500/20 hover:shadow-lg hover:shadow-accent-500/30"
           >
             Book Now <ArrowRight className="w-4 h-4" />
           </BookNow>
@@ -147,42 +141,57 @@ export function Header({ regionName, bookTo }: { regionName: string; bookTo?: st
 
 export function TrustBar() {
   return (
-    <section className="bg-white border-y border-slate-200 py-5 sm:py-6 px-4">
-      {/* A 2x2 grid on a phone. Wrapping a single flex row left the four labels
-          ragged and unevenly spaced, because they are four different lengths. */}
-      <div className="max-w-6xl mx-auto grid grid-cols-2 gap-x-3 gap-y-5 sm:flex sm:flex-wrap sm:justify-center sm:gap-x-12 sm:gap-y-4">
-        {TRUST_ITEMS.map((item) => {
+    <section className="bg-white border-y border-slate-200 px-4" aria-label="Why use us">
+      {/* A 2x2 grid on a phone, four equal columns with rules between them on
+          a wide screen. Equal cells keep four labels of different lengths
+          from looking ragged, and each carries a short line saying what the
+          promise means for the reader, not just its name. */}
+      <ul className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 md:divide-x divide-slate-200">
+        {TRUST_ITEMS.map((item, i) => {
           const Icon = item.icon;
           return (
-            <div
+            <li
               key={item.text}
-              className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left text-slate-600 font-semibold uppercase tracking-wider text-[11px] sm:text-base"
+              className={`flex items-center gap-3 py-4 sm:py-6 md:px-6 ${i % 2 === 0 ? 'pr-2' : 'pl-3 border-l border-slate-200 md:border-l-0'} ${i < 2 ? 'border-b border-slate-200 md:border-b-0' : ''}`}
             >
-              <Icon className="w-6 h-6 sm:w-5 sm:h-5 text-navy-700 shrink-0" />
-              <span>{item.text}</span>
-            </div>
+              <span className="w-10 h-10 sm:w-11 sm:h-11 bg-accent-400 text-neutral-950 flex items-center justify-center shrink-0">
+                <Icon className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-extrabold text-slate-950 text-sm sm:text-base tracking-tight leading-tight">
+                  {item.text}
+                </span>
+                <span className="block text-[11px] sm:text-xs font-medium text-slate-500 mt-0.5 leading-snug">
+                  {item.detail}
+                </span>
+              </span>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </section>
   );
 }
 
+// Numbered, not illustrated. Three abstract glyphs next to three numbers gave
+// the eye two things to decode where there was only one thing to say, and the
+// number is the part that carries the meaning: this is short, and you can see
+// the end of it from here.
 const HOW_IT_WORKS = [
   {
-    icon: Pin,
     title: 'Tell us where you are',
-    body: 'Postcode, street name, or tap Find Me and your phone tells us. Add your number so the driver can reach you. That is all we ask before you see a price.',
+    body: 'Postcode, street name, or tap Find Me and your phone tells us. Add your number so the driver can ring you when they are close. That is all we ask before you see a price.',
+    aside: 'About 20 seconds',
   },
   {
-    icon: Coins,
     title: 'See your price and a live wait',
     body: 'Choose what is wrong and the full price appears, worked out from the real driving route. The wait is measured from where the nearest driver actually is, not a promise from a call centre.',
+    aside: 'No card, no commitment',
   },
   {
-    icon: Navigation,
     title: 'Track your driver to your door',
     body: 'Once a driver takes your job you get a link with their name, a live ETA and their position on a map while they are on the way. Cancel from the same page if plans change, and rate them when it is done.',
+    aside: 'Free to cancel any time',
   },
 ];
 
@@ -191,7 +200,7 @@ export function HowItWorks() {
     <section className="py-12 sm:py-20 px-4 bg-white border-t border-slate-200" id="how-it-works">
       <div className="max-w-6xl mx-auto">
         <Reveal className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-          <div className="text-xs font-black tracking-[0.3em] uppercase text-red-600 mb-3">
+          <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-3">
             How it works
           </div>
           <h2 className="font-sans font-extrabold text-3xl md:text-5xl text-slate-950 tracking-tight mb-4">
@@ -203,37 +212,27 @@ export function HowItWorks() {
           </p>
         </Reveal>
         <ol className="grid md:grid-cols-3 gap-6">
-          {HOW_IT_WORKS.map((step, i) => {
-            const Icon = step.icon;
-            return (
-              <Reveal key={step.title} delay={i * 0.1} className="h-full">
-                <li className="h-full bg-slate-50 border-2 border-slate-200 p-6 flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 bg-neutral-950 text-yellow-400 font-display text-xl flex items-center justify-center shrink-0">
-                      {i + 1}
-                    </span>
-                    <Icon className="w-6 h-6 text-navy-700 shrink-0" aria-hidden="true" />
-                  </div>
-                  <h3 className="font-sans font-extrabold text-xl tracking-tight text-slate-950">
-                    {step.title}
-                  </h3>
-                  <p className="text-slate-600 font-medium leading-relaxed text-sm">{step.body}</p>
-                </li>
-              </Reveal>
-            );
-          })}
+          {HOW_IT_WORKS.map((step, i) => (
+            <Reveal key={step.title} delay={i * 0.1} className="h-full">
+              <li className="h-full bg-white border border-slate-200 rounded-none p-6 flex flex-col gap-4 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                {/* The numeral is the whole graphic now, so it is sized to be
+                    read across a room rather than tucked beside a glyph. */}
+                <span className="w-12 h-12 rounded-none bg-accent-400 text-neutral-950 font-display text-2xl flex items-center justify-center shrink-0">
+                  {i + 1}
+                </span>
+                <h3 className="font-sans font-extrabold text-xl tracking-tight text-slate-950">
+                  {step.title}
+                </h3>
+                <p className="text-slate-600 font-medium leading-relaxed text-sm">{step.body}</p>
+                {/* The objection each step actually raises, answered on the
+                    step itself: how long, what it costs me, can I back out. */}
+                <p className="mt-auto pt-4 border-t border-slate-100 text-[11px] font-black uppercase tracking-[0.15em] text-slate-950">
+                  {step.aside}
+                </p>
+              </li>
+            </Reveal>
+          ))}
         </ol>
-        <Reveal className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm font-bold text-slate-600">
-          <span>
-            From <span className="text-slate-950">£{FROM_PRICE}</span>, shown before you book.
-          </span>
-          <Link
-            to={PRICING_PATH}
-            className="inline-flex items-center gap-1.5 text-red-600 hover:text-red-500 uppercase tracking-wider"
-          >
-            See every price <ArrowRight className="w-4 h-4" />
-          </Link>
-        </Reveal>
       </div>
     </section>
   );
@@ -242,18 +241,18 @@ export function HowItWorks() {
 export function Coverage() {
   return (
     <section
-      className="py-12 sm:py-20 px-4 bg-navy-900 text-white border-t border-navy-800"
+      className="py-12 sm:py-20 px-4 bg-slate-50 text-slate-950 border-t border-slate-200"
       id="areas"
     >
       <div className="max-w-6xl mx-auto">
         <Reveal className="text-center mb-8 sm:mb-12">
-          <div className="text-xs font-black tracking-[0.3em] uppercase text-yellow-400 mb-3">
+          <div className="text-xs font-black tracking-[0.3em] uppercase text-slate-950 mb-3">
             Coverage Map
           </div>
           <h2 className="font-sans font-extrabold text-3xl md:text-5xl mb-4 tracking-tight">
-            Car Recovery <span className="text-yellow-400">Areas We Cover</span>
+            Car Recovery <span className="text-slate-950">Areas We Cover</span>
           </h2>
-          <p className="text-blue-100 text-lg max-w-3xl mx-auto">
+          <p className="text-slate-600 text-lg max-w-3xl mx-auto">
             Rapid 24/7 car recovery, towing and roadside assistance across all of Greater Manchester
             and surrounding areas.
           </p>
@@ -264,12 +263,12 @@ export function Coverage() {
             a phone they cannot fit one line at a legible size, so they wrap and
             every tile in the row matches them. The ampersand buys back a line's
             worth of width. REGIONS itself is untouched: it drives the URL slugs. */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 text-sm font-bold text-blue-50">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 text-sm font-bold text-slate-800">
           {REGIONS.filter((area) => area !== HOME_REGION).map((area, i) => (
             <Reveal key={area} delay={Math.min(i * 0.02, 0.5)} y={16} className="h-full">
               <Link
                 to={regionPath(area)}
-                className="h-full flex items-center gap-2 p-3 rounded-none bg-navy-800/60 border border-white/10 hover:bg-yellow-400 hover:text-neutral-950 hover:border-yellow-400 hover:-translate-y-0.5 transition-all justify-center text-center leading-tight text-balance"
+                className="h-full flex items-center gap-2 p-3 rounded-none bg-white border border-slate-200 shadow-sm hover:bg-accent-400 hover:text-neutral-950 hover:border-accent-400 hover:-translate-y-0.5 transition-all justify-center text-center leading-tight text-balance"
               >
                 {area.replace(' and ', ' & ')}
               </Link>
@@ -283,14 +282,12 @@ export function Coverage() {
 
 export function FinalCta({ regionName }: { regionName: string }) {
   return (
-    <section className="py-14 sm:py-24 px-4 bg-navy-900 relative overflow-hidden">
-      <div className="hazard-stripes absolute inset-x-0 top-0 h-1.5" aria-hidden="true"></div>
-      <div className="hazard-stripes absolute inset-x-0 bottom-0 h-1.5" aria-hidden="true"></div>
+    <section className="py-14 sm:py-24 px-4 bg-neutral-950 relative overflow-hidden">
       <Reveal className="max-w-4xl mx-auto text-center relative z-10">
         <h2 className="font-display text-4xl md:text-6xl text-white mb-6 tracking-tight">
           We'll come and get you.
         </h2>
-        <p className="text-lg sm:text-xl text-blue-100 font-semibold mb-8 sm:mb-12">
+        <p className="text-lg sm:text-xl text-neutral-300 font-semibold mb-8 sm:mb-12">
           Tell us where you are and someone from our {regionName} team will be on their way. Any
           hour, any day.
         </p>
@@ -299,7 +296,7 @@ export function FinalCta({ regionName }: { regionName: string }) {
           <a
             href={`tel:${PHONE_TEL}`}
             data-call="final-cta"
-            className="sheen bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display py-4 px-8 rounded-none flex items-center justify-center gap-3 text-xl uppercase tracking-wider transition-all hover:-translate-y-0.5 shadow-md hover:shadow-lg"
+            className="sheen bg-accent-400 hover:bg-accent-300 text-neutral-950 font-display py-4 px-8 rounded-none flex items-center justify-center gap-3 text-xl uppercase tracking-wider transition-all hover:-translate-y-0.5 shadow-lg shadow-black/20 hover:shadow-xl"
           >
             <PhoneCall className="w-6 h-6" />
             {PHONE_DISPLAY}
@@ -308,7 +305,7 @@ export function FinalCta({ regionName }: { regionName: string }) {
             type="button"
             onClick={scrollToBooking}
             data-track="final-cta-book"
-            className="bg-transparent text-white hover:bg-white hover:text-navy-900 border-2 border-white/70 font-display py-4 px-8 rounded-none flex items-center justify-center gap-3 text-xl uppercase tracking-wider transition-all hover:-translate-y-0.5"
+            className="bg-transparent text-white hover:bg-white hover:text-neutral-950 border-2 border-white/70 font-display py-4 px-8 rounded-none flex items-center justify-center gap-3 text-xl uppercase tracking-wider transition-all hover:-translate-y-0.5"
           >
             Book Online Now
           </button>
@@ -321,10 +318,13 @@ export function FinalCta({ regionName }: { regionName: string }) {
 /** A slim band for recovery drivers who land on a customer page. */
 export function DriverStrip() {
   return (
-    <section className="bg-slate-100 border-t-2 border-slate-200 py-8 px-4" aria-label="For drivers">
+    <section
+      className="bg-slate-100 border-t-2 border-slate-200 py-8 px-4"
+      aria-label="For drivers"
+    >
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <span className="w-12 h-12 bg-neutral-950 text-yellow-400 flex items-center justify-center shrink-0">
+          <span className="w-12 h-12 rounded-none bg-accent-400 text-neutral-950 flex items-center justify-center shrink-0">
             <Truck className="w-6 h-6" aria-hidden="true" />
           </span>
           <div>
@@ -341,13 +341,13 @@ export function DriverStrip() {
           <Link
             to={RECRUIT_PATH}
             data-track="driver-strip-apply"
-            className="bg-neutral-950 hover:bg-neutral-800 text-white font-display px-6 py-3 uppercase tracking-wider text-sm inline-flex items-center gap-2"
+            className="bg-neutral-950 hover:bg-neutral-800 text-white font-display px-6 py-3 rounded-none uppercase tracking-wider text-sm inline-flex items-center gap-2"
           >
             Drive with us <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             to="/login"
-            className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-red-600 underline"
+            className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-600 underline"
           >
             Driver sign in
           </Link>
@@ -359,7 +359,7 @@ export function DriverStrip() {
 
 export function Footer({ regionName }: { regionName: string }) {
   return (
-    <footer className="bg-neutral-950 text-neutral-300 pt-10 sm:pt-16 pb-28 sm:pb-16 px-4 text-sm border-t-4 border-yellow-400">
+    <footer className="bg-neutral-950 text-neutral-300 pt-10 sm:pt-16 pb-28 sm:pb-16 px-4 text-sm border-t-4 border-accent-400">
       <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-12">
         <div className="col-span-2">
           <div className="flex items-center gap-3 mb-6">
@@ -372,14 +372,14 @@ export function Footer({ regionName }: { regionName: string }) {
             you.
           </p>
           <div className="flex gap-4">
-            <div className="bg-neutral-900 p-3 rounded-none border-2 border-neutral-800">
-              <div className="font-display text-yellow-400 text-lg">24/7</div>
+            <div className="bg-neutral-900 p-3 rounded-none border border-neutral-800">
+              <div className="font-display text-accent-300 text-lg">24/7</div>
               <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                 Dispatch
               </div>
             </div>
-            <div className="bg-neutral-900 p-3 rounded-none border-2 border-neutral-800">
-              <div className="font-display text-yellow-400 text-lg">£{FROM_PRICE}</div>
+            <div className="bg-neutral-900 p-3 rounded-none border border-neutral-800">
+              <div className="font-display text-accent-300 text-lg">£{FROM_PRICE}</div>
               <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                 From
               </div>
@@ -394,13 +394,13 @@ export function Footer({ regionName }: { regionName: string }) {
           <ul className="space-y-3 font-medium">
             {SERVICE_PAGES.map((page) => (
               <li key={page.slug}>
-                <Link to={servicePath(page)} className="hover:text-red-500 transition-colors">
+                <Link to={servicePath(page)} className="hover:text-accent-300 transition-colors">
                   {page.name}
                 </Link>
               </li>
             ))}
             <li>
-              <Link to={PRICING_PATH} className="hover:text-red-500 transition-colors">
+              <Link to={PRICING_PATH} className="hover:text-accent-300 transition-colors">
                 Prices
               </Link>
             </li>
@@ -413,23 +413,26 @@ export function Footer({ regionName }: { regionName: string }) {
           </h4>
           <ul className="space-y-3 font-medium">
             <li className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-red-500" />{' '}
+              <Phone className="w-4 h-4 text-accent-300" />{' '}
               <a
                 href={`tel:${PHONE_TEL}`}
                 data-call="footer"
-                className="hover:text-red-500 transition-colors"
+                className="hover:text-accent-300 transition-colors"
               >
                 {PHONE_DISPLAY}
               </a>
             </li>
             <li className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-red-500" /> {regionName}, Greater Manchester
+              <MapPin className="w-4 h-4 text-accent-300" /> {regionName}, Greater Manchester
             </li>
             <li className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-red-500" /> Open 24 Hours
+              <Clock className="w-4 h-4 text-accent-300" /> Open 24 Hours
             </li>
             <li className="break-all">
-              <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-red-500 transition-colors">
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="hover:text-accent-300 transition-colors"
+              >
                 {CONTACT_EMAIL}
               </a>
             </li>
@@ -440,13 +443,13 @@ export function Footer({ regionName }: { regionName: string }) {
         <p>
           © {new Date().getFullYear()} {BRAND_NAME}. Car Recovery {regionName}. All rights reserved.
         </p>
-        <Link to="/privacy" className="hover:text-red-500 transition-colors underline">
+        <Link to="/privacy" className="hover:text-accent-300 transition-colors underline">
           Privacy Policy
         </Link>
-        <Link to={RECRUIT_PATH} className="hover:text-red-500 transition-colors underline">
+        <Link to={RECRUIT_PATH} className="hover:text-accent-300 transition-colors underline">
           Drive with us
         </Link>
-        <Link to="/login" className="hover:text-red-500 transition-colors underline">
+        <Link to="/login" className="hover:text-accent-300 transition-colors underline">
           Driver and staff sign in
         </Link>
       </div>
@@ -463,7 +466,7 @@ export function MobileCta({ bookTo }: { bookTo?: string }) {
         <a
           href={`tel:${PHONE_TEL}`}
           data-call="mobile-bar"
-          className="flex-1 bg-yellow-400 text-neutral-950 font-bold text-base py-3.5 rounded-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md shadow-yellow-400/30"
+          className="flex-1 bg-accent-400 text-neutral-950 font-bold text-base py-3.5 rounded-none flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md shadow-accent-400/30"
         >
           <PhoneCall className="w-5 h-5 shrink-0" />
           Call Now
@@ -471,7 +474,7 @@ export function MobileCta({ bookTo }: { bookTo?: string }) {
         <BookNow
           to={bookTo}
           trackAs="mobile-bar-book"
-          className="flex-1 bg-neutral-950 text-white font-bold text-base py-3.5 rounded-sm flex items-center justify-center active:scale-95 transition-transform shadow-md"
+          className="flex-1 bg-neutral-950 text-white font-bold text-base py-3.5 rounded-none flex items-center justify-center active:scale-95 transition-transform shadow-md"
         >
           Book Online
         </BookNow>

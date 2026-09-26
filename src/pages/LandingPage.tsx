@@ -54,7 +54,7 @@ function SeoContent({ regionName }: { regionName: string }) {
             `Covering all of ${regionName} and surrounding areas`,
           ].map((item) => (
             <li key={item} className="flex items-start gap-2 text-slate-800">
-              <CheckCircle2 className="w-5 h-5 text-neutral-950 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-slate-950 shrink-0 mt-0.5" />
               <span>{item}</span>
             </li>
           ))}
@@ -89,7 +89,7 @@ export function RegionLanding({ regionName }: { regionName: string }) {
 
   return (
     <MetricsProvider>
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-yellow-400 selection:text-neutral-950">
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-950 selection:bg-accent-400 selection:text-neutral-950">
         <UrgencyBar regionName={regionName} />
         <Header regionName={regionName} />
         <main>
@@ -100,16 +100,16 @@ export function RegionLanding({ regionName }: { regionName: string }) {
             breadcrumb={isHome ? undefined : `Car Recovery ${regionName}`}
             lines={[
               <>
-                Typically with you in <span className="text-red-600 font-black">30 minutes</span> or
-                less
+                Typically with you in <span className="text-slate-950 font-black">30 minutes</span>{' '}
+                or less
               </>,
               <>
                 Your price on screen{' '}
-                <span className="text-red-600 font-black">before you book</span>
+                <span className="text-slate-950 font-black">before you book</span>
               </>,
               <>
-                <span className="text-red-600 font-black">Track your driver</span> live to your door
-                in {regionName}
+                <span className="text-slate-950 font-black">Track your driver</span> live to your
+                door in {regionName}
               </>,
             ]}
           />

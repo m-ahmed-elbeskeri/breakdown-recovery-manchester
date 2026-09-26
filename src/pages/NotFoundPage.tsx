@@ -20,14 +20,14 @@ export function NotFoundPage() {
       <div className="flex flex-col sm:flex-row gap-4 mt-8">
         <Link
           to="/"
-          className="bg-neutral-950 hover:bg-black text-white font-display py-3 px-6 rounded-none uppercase tracking-wider inline-flex items-center justify-center gap-2"
+          className="bg-neutral-950 hover:bg-slate-800 text-white font-display py-3 px-6 rounded-none uppercase tracking-wider inline-flex items-center justify-center gap-2"
         >
           <Home className="w-5 h-5" /> Back home
         </Link>
         <a
           href={`tel:${PHONE_TEL}`}
           data-call="not-found"
-          className="bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-display py-3 px-6 rounded-none uppercase tracking-wider inline-flex items-center justify-center gap-2"
+          className="bg-accent-400 hover:bg-accent-300 text-neutral-950 font-display py-3 px-6 rounded-none uppercase tracking-wider inline-flex items-center justify-center gap-2"
         >
           <PhoneCall className="w-5 h-5" /> Call {PHONE_DISPLAY}
         </a>

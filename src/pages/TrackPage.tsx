@@ -15,6 +15,8 @@ import { serviceLabel } from '../data';
 import { whenLabel } from '../driver';
 import { useNoIndex } from '../seo';
 import { track } from '../telemetry';
+import { CardPayment } from '../components/CardPayment';
+import { choosePaymentMethod, formatPounds, syncCardPayment } from '../payments';
 import {
   TRACK_STEPS,
   TrackError,
@@ -103,6 +105,14 @@ export function TrackPage() {
     return () => document.removeEventListener('visibilitychange', onShow);
   }, [load]);
 
+  // Back from a card check that needed its own page: ask Stripe how it went.
+  useEffect(() => {
+    if (!token || !new URLSearchParams(window.location.search).has('payment_intent')) return;
+    void syncCardPayment(token)
+      .then(() => load())
+      .catch(() => undefined);
+  }, [token, load]);
+
   // Counted once per visit, with where the job had got to when they looked.
   const viewedRef = useRef(false);
   useEffect(() => {
@@ -145,17 +155,17 @@ export function TrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white font-sans">
+    <div className="min-h-screen bg-white text-slate-950 font-sans">
       <div className="hazard-stripes h-2" aria-hidden="true" />
-      <header className="border-b-2 border-neutral-800 px-4 py-3 flex items-center justify-between gap-4">
+      <header className="border-b-2 border-slate-200 px-4 py-3 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2.5 min-w-0">
           <Logo className="w-9 h-9 shrink-0" />
-          <Wordmark className="text-lg text-white whitespace-nowrap" />
+          <Wordmark className="text-lg text-slate-950 whitespace-nowrap" />
         </Link>
         <a
           href={`tel:${PHONE_TEL}`}
           data-call="track-header"
-          className="shrink-0 bg-yellow-400 text-neutral-950 font-display px-4 py-2 uppercase tracking-wider text-sm inline-flex items-center gap-2"
+          className="shrink-0 bg-accent-400 text-neutral-950 font-display px-4 py-2 uppercase tracking-wider text-sm inline-flex items-center gap-2"
         >
           <PhoneCall className="w-4 h-4" /> Call
         </a>
@@ -163,29 +173,29 @@ export function TrackPage() {
 
       <main className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-4">
         {notFound ? (
-          <section className="border-2 border-neutral-800 bg-neutral-900 p-6 text-center">
+          <section className="border border-slate-200 bg-slate-50 p-6 text-center">
             <h1 className="font-display text-2xl uppercase tracking-tight">Booking not found</h1>
-            <p className="text-neutral-400 text-sm mt-2">
+            <p className="text-slate-500 text-sm mt-2">
               That link does not match a booking. If you are waiting for recovery, ring us and we
               will find you.
             </p>
             <a
               href={`tel:${PHONE_TEL}`}
               data-call="track-not-found"
-              className="mt-5 inline-flex items-center gap-2 bg-yellow-400 text-neutral-950 font-display px-6 py-3 uppercase tracking-wider"
+              className="mt-5 inline-flex items-center gap-2 bg-accent-400 text-neutral-950 font-display px-6 py-3 uppercase tracking-wider"
             >
               <PhoneCall className="w-5 h-5" /> {PHONE_DISPLAY}
             </a>
           </section>
         ) : !info ? (
-          <p className="text-neutral-400 text-sm flex items-center gap-2 py-10 justify-center">
+          <p className="text-slate-500 text-sm flex items-center gap-2 py-10 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" />{' '}
             {offline ? 'Reconnecting…' : 'Loading your booking…'}
           </p>
         ) : (
           <>
             {offline && (
-              <p className="border-2 border-neutral-700 bg-neutral-900 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+              <p className="border border-slate-300 bg-slate-50 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 No connection. Showing the last update.
               </p>
             )}
@@ -193,9 +203,9 @@ export function TrackPage() {
             {info.motorway && info.status !== 'complete' && info.status !== 'cancelled' && (
               <div
                 role="alert"
-                className="border-2 border-yellow-400 bg-yellow-400/10 px-4 py-3 text-[12px] leading-relaxed"
+                className="border border-accent-400 bg-accent-50 px-4 py-3 text-[12px] leading-relaxed"
               >
-                <div className="flex items-center gap-2 text-yellow-400 font-black text-[11px] uppercase tracking-[0.15em] mb-1">
+                <div className="flex items-center gap-2 text-slate-950 font-black text-[11px] uppercase tracking-[0.15em] mb-1">
                   <AlertTriangle className="w-4 h-4" /> Motorway
                 </div>
                 <strong>Stay behind the barrier</strong>, away from the car, until the driver is
@@ -205,10 +215,12 @@ export function TrackPage() {
 
             <StatusCard info={info} />
 
+            <PaymentPanel info={info} token={token} onChange={() => void load()} />
+
             {info.pickupLat !== null && info.pickupLng !== null && (
               <Suspense
                 fallback={
-                  <div className="h-64 sm:h-80 w-full bg-neutral-900 border-2 border-neutral-800" />
+                  <div className="h-64 sm:h-80 w-full bg-slate-50 border border-slate-200" />
                 }
               >
                 <TrackMap
@@ -223,29 +235,31 @@ export function TrackPage() {
             )}
 
             {info.driver && info.status !== 'cancelled' && (
-              <section className="border-2 border-neutral-800 bg-neutral-900 p-4 flex items-center justify-between gap-3">
+              <section className="border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-3">
                 {info.driver.hasPhoto && (
                   <img
                     src={driverPhotoUrl(token)}
                     alt={`Photo of ${firstName(info.driver.name)}`}
-                    className="w-16 h-16 object-cover border-2 border-neutral-700 shrink-0"
+                    className="w-16 h-16 object-cover border border-slate-300 shrink-0"
                   />
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
                     Your driver
                   </div>
                   <div className="font-display text-xl uppercase tracking-tight truncate">
                     {info.driver.name}
                   </div>
                   {(info.driver.vehicleReg || info.driver.vehicleDescription) && (
-                    <div className="text-[12px] text-neutral-300 font-medium">
+                    <div className="text-[12px] text-slate-600 font-medium">
                       Look for{' '}
-                      {info.driver.vehicleDescription ? `a ${info.driver.vehicleDescription}` : 'the truck'}
+                      {info.driver.vehicleDescription
+                        ? `a ${info.driver.vehicleDescription}`
+                        : 'the truck'}
                       {info.driver.vehicleReg && (
                         <>
                           {' '}
-                          <span className="inline-block bg-yellow-400 text-neutral-950 font-display px-1.5 tracking-wider">
+                          <span className="inline-block bg-accent-400 text-neutral-950 font-display px-1.5 tracking-wider">
                             {formatReg(info.driver.vehicleReg)}
                           </span>
                         </>
@@ -253,7 +267,7 @@ export function TrackPage() {
                     </div>
                   )}
                   {info.driver.locatedAt && (
-                    <div className="text-[11px] text-neutral-400 font-medium">
+                    <div className="text-[11px] text-slate-500 font-medium">
                       Position updated {agoLabel(info.driver.locatedAt)}
                     </div>
                   )}
@@ -261,7 +275,7 @@ export function TrackPage() {
                 {info.driver.phone && info.status !== 'complete' && (
                   <a
                     href={`tel:${info.driver.phone.replace(/[^\d+]/g, '')}`}
-                    className="shrink-0 border-2 border-yellow-400 text-yellow-400 font-display px-4 py-2.5 uppercase tracking-wider text-sm inline-flex items-center gap-2"
+                    className="shrink-0 border-2 border-accent-400 text-slate-950 font-display px-4 py-2.5 uppercase tracking-wider text-sm inline-flex items-center gap-2"
                   >
                     <Phone className="w-4 h-4" /> Ring {firstName(info.driver.name)}
                   </a>
@@ -272,10 +286,10 @@ export function TrackPage() {
             <Details info={info} />
 
             {info.status === 'complete' && (
-              <section className="border-2 border-yellow-400 bg-yellow-400/10 p-4">
+              <section className="border border-accent-400 bg-accent-50 p-4">
                 {info.rating !== null || thanked ? (
                   <p className="text-sm font-bold flex items-center gap-2">
-                    <Check className="w-5 h-5 text-yellow-400" /> Thanks. You rated this job{' '}
+                    <Check className="w-5 h-5 text-slate-950" /> Thanks. You rated this job{' '}
                     {info.rating}/5.
                   </p>
                 ) : (
@@ -283,7 +297,7 @@ export function TrackPage() {
                     <h2 className="font-display text-lg uppercase tracking-tight">
                       How did we do?
                     </h2>
-                    <p className="text-[12px] text-neutral-300 mt-1">
+                    <p className="text-[12px] text-slate-600 mt-1">
                       Your rating goes straight to the operator and the driver.
                     </p>
                     <div className="flex gap-1.5 mt-3" role="radiogroup" aria-label="Rating">
@@ -298,7 +312,7 @@ export function TrackPage() {
                           className="p-1"
                         >
                           <Star
-                            className={`w-8 h-8 ${n <= stars ? 'text-yellow-400 fill-yellow-400' : 'text-neutral-600'}`}
+                            className={`w-8 h-8 ${n <= stars ? 'text-slate-950 fill-accent-400' : 'text-slate-400'}`}
                           />
                         </button>
                       ))}
@@ -308,13 +322,13 @@ export function TrackPage() {
                       onChange={(e) => setComment(e.target.value.slice(0, 500))}
                       placeholder="Anything to add? (optional)"
                       rows={2}
-                      className="mt-3 w-full bg-neutral-950 border-2 border-neutral-800 focus:border-yellow-400 outline-none px-3 py-2 text-sm text-white placeholder:text-neutral-500"
+                      className="mt-3 w-full bg-white border-2 border-slate-200 focus:border-accent-400 outline-none px-3 py-2 text-sm text-slate-950 placeholder:text-slate-400"
                     />
                     <button
                       type="button"
                       onClick={rate}
                       disabled={busy || stars === 0}
-                      className="mt-3 w-full bg-yellow-400 text-neutral-950 font-display py-3 uppercase tracking-wider disabled:opacity-50"
+                      className="mt-3 w-full bg-accent-400 text-neutral-950 font-display py-3 uppercase tracking-wider disabled:opacity-50"
                     >
                       Send rating
                     </button>
@@ -324,7 +338,7 @@ export function TrackPage() {
             )}
 
             {info.canCancel && (
-              <section className="border-2 border-neutral-800 bg-neutral-900 p-4">
+              <section className="border border-slate-200 bg-slate-50 p-4">
                 {confirmCancel ? (
                   <div className="flex flex-col gap-3">
                     <p className="text-sm font-bold">
@@ -334,7 +348,7 @@ export function TrackPage() {
                       <button
                         type="button"
                         onClick={() => setConfirmCancel(false)}
-                        className="flex-1 bg-neutral-800 text-white font-display py-3 uppercase tracking-wider text-sm"
+                        className="flex-1 bg-slate-100 text-slate-950 font-display py-3 uppercase tracking-wider text-sm"
                       >
                         Keep it
                       </button>
@@ -342,7 +356,7 @@ export function TrackPage() {
                         type="button"
                         onClick={cancel}
                         disabled={busy}
-                        className="flex-1 bg-[var(--color-danger)] text-white font-display py-3 uppercase tracking-wider text-sm disabled:opacity-50"
+                        className="flex-1 bg-[var(--color-danger)] text-slate-950 font-display py-3 uppercase tracking-wider text-sm disabled:opacity-50"
                       >
                         Yes, cancel
                       </button>
@@ -352,7 +366,7 @@ export function TrackPage() {
                   <button
                     type="button"
                     onClick={() => setConfirmCancel(true)}
-                    className="w-full text-neutral-400 hover:text-[var(--color-danger-soft)] font-bold text-[12px] uppercase tracking-wider py-1"
+                    className="w-full text-slate-500 hover:text-[var(--color-danger)] font-bold text-[12px] uppercase tracking-wider py-1"
                   >
                     Don't need us any more? Cancel booking
                   </button>
@@ -363,13 +377,13 @@ export function TrackPage() {
             {actionError && (
               <p
                 role="alert"
-                className="text-[var(--color-danger-soft)] text-xs font-bold uppercase tracking-wider text-center"
+                className="text-[var(--color-danger)] text-xs font-bold uppercase tracking-wider text-center"
               >
                 {actionError}
               </p>
             )}
 
-            <p className="text-center text-[11px] text-neutral-500 mt-2">
+            <p className="text-center text-[11px] text-slate-500 mt-2">
               Keep this page open. It updates itself. Something wrong?{' '}
               <a href={`tel:${PHONE_TEL}`} data-call="track-footer" className="underline">
                 Ring {PHONE_DISPLAY}
@@ -394,28 +408,28 @@ function StatusCard({ info }: { info: TrackInfo }) {
 
   return (
     <section
-      className={`border-2 p-5 ${cancelled ? 'border-neutral-700 bg-neutral-900' : 'border-yellow-400 bg-neutral-900'}`}
+      className={`border p-5 ${cancelled ? 'border-slate-300 bg-slate-50' : 'border-accent-400 bg-slate-50'}`}
     >
-      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">
+      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
         Booking #{info.id}
       </div>
       <h1 className="font-display text-3xl uppercase tracking-tight mt-1 leading-none">
         {headlineFor(info)}
       </h1>
-      <p className="text-neutral-300 text-sm mt-2">{subtitleFor(info)}</p>
+      <p className="text-slate-600 text-sm mt-2">{subtitleFor(info)}</p>
 
       {showEta && (
         <div className="mt-4 flex items-baseline gap-2">
           <span className="text-xs text-red-400 font-black tracking-[0.2em] uppercase">
             {info.status === 'pending' ? 'Typical wait' : 'Arriving in'}
           </span>
-          <span className="font-display text-4xl text-yellow-400">
+          <span className="font-display text-4xl text-slate-950">
             {info.status === 'pending' ? '~' : ''}
             {info.etaMinutes}
           </span>
-          <span className="text-neutral-500 font-bold text-sm">min</span>
+          <span className="text-slate-500 font-bold text-sm">min</span>
           {info.etaSource === 'driver' && (
-            <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider ml-1">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider ml-1">
               measured
             </span>
           )}
@@ -430,11 +444,11 @@ function StatusCard({ info }: { info: TrackInfo }) {
             return (
               <li key={step.status} className="flex flex-col gap-1.5">
                 <span
-                  className={`h-1.5 w-full ${done || current ? 'bg-yellow-400' : 'bg-neutral-800'} ${current && info.status !== 'complete' ? 'animate-pulse' : ''}`}
+                  className={`h-1.5 w-full ${done || current ? 'bg-accent-400' : 'bg-slate-100'} ${current && info.status !== 'complete' ? 'animate-pulse' : ''}`}
                   aria-hidden="true"
                 />
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wider leading-tight ${done || current ? 'text-white' : 'text-neutral-600'}`}
+                  className={`text-[10px] font-bold uppercase tracking-wider leading-tight ${done || current ? 'text-slate-950' : 'text-slate-400'}`}
                   aria-current={current ? 'step' : undefined}
                 >
                   {step.label}
@@ -482,21 +496,176 @@ function Details({ info }: { info: TrackInfo }) {
   rows.push(['Price', info.price !== null ? `£${info.price}` : 'Confirmed by phone']);
 
   return (
-    <section className="border-2 border-neutral-800 bg-neutral-900 p-4">
+    <section className="border border-slate-200 bg-slate-50 p-4">
       <dl className="text-sm grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
-            <dt className="text-neutral-500 text-[11px] font-bold uppercase tracking-wider pt-0.5">
+            <dt className="text-slate-500 text-[11px] font-bold uppercase tracking-wider pt-0.5">
               {label}
             </dt>
             <dd
-              className={`break-words ${label === 'Price' ? 'font-display text-yellow-400 text-lg' : ''}`}
+              className={`break-words ${label === 'Price' ? 'font-display text-slate-950 text-lg' : ''}`}
             >
               {value}
             </dd>
           </div>
         ))}
       </dl>
+    </section>
+  );
+}
+
+/** How this booking is being paid, and adding a card when that's the plan. */
+function PaymentPanel({
+  info,
+  token,
+  onChange,
+}: {
+  info: TrackInfo;
+  token: string;
+  onChange: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (info.price === null) return null;
+
+  const amount = `£${info.price}`;
+  const open = info.status !== 'cancelled' && info.status !== 'complete';
+
+  const switchTo = async (method: 'card' | 'cash') => {
+    setBusy(true);
+    setError(null);
+    try {
+      await choosePaymentMethod(token, method);
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'That could not be changed. Please ring us.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const line = (text: string) => (
+    <section className="border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+      {text}
+    </section>
+  );
+
+  if (info.paymentMethod === 'card') {
+    if (info.paymentStatus === 'paid') return line(`Paid ${amount} by card. Thank you.`);
+    if (info.paymentStatus === 'refunded') return line('Your card payment was refunded.');
+    if (info.paymentStatus === 'partly_refunded')
+      return line('Part of your card payment was refunded.');
+    if (info.status === 'cancelled')
+      return line('Your booking was cancelled, so nothing was taken from your card.');
+    if (info.paymentStatus === 'authorised') {
+      return line(`${amount} is held on your card. It's only taken when the job is done.`);
+    }
+    return (
+      <section className="border border-accent-400 bg-slate-50 p-4 flex flex-col gap-3">
+        <div>
+          <h2 className="font-display text-lg uppercase tracking-tight">
+            {info.paymentStatus === 'failed'
+              ? 'Your card payment didn’t go through'
+              : 'Add your card'}
+          </h2>
+          <p className="text-[12px] text-slate-500 mt-1">
+            {info.paymentStatus === 'failed'
+              ? 'Try again with another card, or pay your driver on the day.'
+              : `We hold ${amount} now and only take it when the job is done.`}
+          </p>
+        </div>
+        <CardPayment token={token} onSettled={() => onChange()} />
+        {open && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void switchTo('cash')}
+            className="self-start text-[12px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-950 underline disabled:opacity-50"
+          >
+            Pay cash instead
+          </button>
+        )}
+        {error && (
+          <p role="alert" className="text-[var(--color-danger)] text-xs font-bold">
+            {error}
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  if (info.paymentStatus === 'paid_in_person') return line('Paid to your driver. Thank you.');
+
+  // Cash with a deposit: the platform's cut on the card, the rest to the driver.
+  const deposit = info.depositPence ?? null;
+  if (deposit) {
+    const depositLabel = formatPounds(deposit);
+    const toDriver = formatPounds(info.price * 100 - deposit);
+    if (info.paymentStatus === 'deposit_paid')
+      return line(`${depositLabel} deposit taken and the rest paid to your driver. Thank you.`);
+    if (info.paymentStatus === 'refunded') return line('Your deposit was refunded.');
+    if (info.paymentStatus === 'partly_refunded') return line('Part of your deposit was refunded.');
+    if (info.status === 'cancelled')
+      return line('Your booking was cancelled, so nothing was taken from your card.');
+    if (!open) return null;
+    if (info.paymentStatus === 'authorised')
+      return line(
+        `Your ${depositLabel} deposit is held on your card and taken when the job is done. Pay your driver ${toDriver} in cash.`,
+      );
+    return (
+      <section className="border border-accent-400 bg-slate-50 p-4 flex flex-col gap-3">
+        <div>
+          <h2 className="font-display text-lg uppercase tracking-tight">
+            {info.paymentStatus === 'failed'
+              ? 'Your deposit didn’t go through'
+              : `Pay your ${depositLabel} deposit`}
+          </h2>
+          <p className="text-[12px] text-slate-500 mt-1">
+            {info.paymentStatus === 'failed'
+              ? `Try another card, or pay your driver the full ${amount} in cash on the day.`
+              : `It secures your booking and is only held until the job is done. Then pay your driver ${toDriver} in cash.`}
+          </p>
+        </div>
+        <CardPayment token={token} onSettled={() => onChange()} />
+        {info.cardAvailable && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void switchTo('card')}
+            className="self-start text-[12px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-950 underline disabled:opacity-50"
+          >
+            Pay the full {amount} by card instead
+          </button>
+        )}
+        {error && (
+          <p role="alert" className="text-[var(--color-danger)] text-xs font-bold">
+            {error}
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  if (!open) return null;
+  return (
+    <section className="border border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-slate-700">Pay your driver {amount} on the day.</p>
+      {info.cardAvailable && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void switchTo('card')}
+          className="text-[12px] font-bold uppercase tracking-wider text-slate-950 underline disabled:opacity-50"
+        >
+          Pay by card instead
+        </button>
+      )}
+      {error && (
+        <p role="alert" className="w-full text-[var(--color-danger)] text-xs font-bold">
+          {error}
+        </p>
+      )}
     </section>
   );
 }

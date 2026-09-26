@@ -294,7 +294,7 @@ function FieldInput({
           type="checkbox"
           checked={Boolean(value)}
           onChange={(e) => onChange(e.target.checked)}
-          className="mt-0.5 w-5 h-5 accent-yellow-400 shrink-0"
+          className="mt-0.5 w-5 h-5 accent-accent-400 shrink-0"
         />
         <span>
           <span className="font-bold text-sm text-white block">{def.label}</span>
@@ -321,7 +321,7 @@ function FieldInput({
                 }
                 className={`min-w-[3.25rem] px-3 py-2.5 font-display text-base border-2 ${
                   on
-                    ? 'bg-yellow-400 text-neutral-950 border-yellow-400'
+                    ? 'bg-accent-400 text-neutral-950 border-accent-400'
                     : 'bg-neutral-950 text-neutral-300 border-neutral-800 hover:border-neutral-600'
                 }`}
               >

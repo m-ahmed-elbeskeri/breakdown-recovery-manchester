@@ -5,14 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Loader2 } from '../icons';
-import {
-  Chip,
-  ErrorNotice,
-  Field,
-  inputClass,
-  PrimaryButton,
-  SecondaryButton,
-} from './console';
+import { Chip, ErrorNotice, Field, inputClass, PrimaryButton, SecondaryButton } from './console';
 import {
   DOC_GROUPS,
   DOC_TYPE_BY_KEY,
@@ -108,7 +101,7 @@ function DocumentCard({
     item.state === 'rejected' || item.state === 'expired'
       ? 'border-[var(--color-danger-soft)]'
       : item.state === 'expiring'
-        ? 'border-yellow-400'
+        ? 'border-accent-400'
         : 'border-neutral-800';
 
   const del = async (doc: DocumentInfo) => {
@@ -143,14 +136,14 @@ function DocumentCard({
                   left !== null && left < 0
                     ? 'text-[var(--color-danger-soft)]'
                     : left !== null && left <= 30
-                      ? 'text-yellow-400'
+                      ? 'text-accent-400'
                       : 'text-white'
                 }`}
               >
                 {formatDate(item.validUntil)}
               </div>
               {left !== null && left >= 0 && left <= 30 && (
-                <div className="text-[11px] text-yellow-400">
+                <div className="text-[11px] text-accent-400">
                   {left === 0 ? 'ends today' : `${left} day${left === 1 ? '' : 's'} left`}
                 </div>
               )}
@@ -250,14 +243,18 @@ function DocumentRow({
             doc.status === 'approved' ? 'success' : doc.status === 'rejected' ? 'danger' : 'info'
           }
         >
-          {doc.status === 'approved' ? 'Approved' : doc.status === 'rejected' ? 'Sent back' : 'Waiting'}
+          {doc.status === 'approved'
+            ? 'Approved'
+            : doc.status === 'rejected'
+              ? 'Sent back'
+              : 'Waiting'}
         </Chip>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={onView}
-          className="text-xs font-bold uppercase tracking-wider text-yellow-400 hover:text-yellow-300 underline"
+          className="text-xs font-bold uppercase tracking-wider text-accent-400 hover:text-accent-300 underline"
         >
           View
         </button>
@@ -391,10 +388,7 @@ function UploadForm({
         </p>
       )}
       {dl && (
-        <Field
-          label={def.dateRequired ? dl : `${dl}, if it has one`}
-          htmlFor={`date-${def.key}`}
-        >
+        <Field label={def.dateRequired ? dl : `${dl}, if it has one`} htmlFor={`date-${def.key}`}>
           <input
             id={`date-${def.key}`}
             type="date"
@@ -427,7 +421,7 @@ function UploadForm({
           aria-valuemax={100}
         >
           <div
-            className="h-full bg-yellow-400 transition-all"
+            className="h-full bg-accent-400 transition-all"
             style={{ width: `${Math.round((progress ?? 0) * 100)}%` }}
           />
         </div>
@@ -495,7 +489,9 @@ export function FileViewer({
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3 bg-neutral-950 border-b-2 border-neutral-800">
         <div className="min-w-0">
-          <div className="font-display uppercase tracking-tight text-white truncate">{doc.label}</div>
+          <div className="font-display uppercase tracking-tight text-white truncate">
+            {doc.label}
+          </div>
           <div className="text-[12px] text-neutral-500 truncate">{doc.fileName}</div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -504,7 +500,7 @@ export function FileViewer({
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-bold uppercase tracking-wider text-yellow-400 underline"
+              className="text-xs font-bold uppercase tracking-wider text-accent-400 underline"
             >
               Open
             </a>

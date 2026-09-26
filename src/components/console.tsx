@@ -11,7 +11,7 @@ import { ApiError } from '../apiClient';
 import { Logo } from './Logo';
 
 export const inputClass =
-  'w-full px-3.5 py-3 bg-neutral-950 border-2 border-neutral-800 focus:border-yellow-400 outline-none text-white text-[15px] font-medium placeholder:text-neutral-500 disabled:opacity-60';
+  'w-full px-3.5 py-3 bg-neutral-950 border-2 border-neutral-800 focus:border-accent-400 outline-none text-white text-[15px] font-medium placeholder:text-neutral-500 disabled:opacity-60';
 
 export const labelClass =
   'block text-[11px] font-black uppercase tracking-[0.15em] text-neutral-400';
@@ -77,7 +77,7 @@ const buttonBase =
   'inline-flex items-center justify-center gap-2 px-5 py-3 font-display uppercase tracking-wider text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 
 export const PrimaryButton = makeButton(
-  `${buttonBase} bg-yellow-400 hover:bg-yellow-300 text-neutral-950`,
+  `${buttonBase} bg-accent-400 hover:bg-accent-300 text-neutral-950`,
 );
 export const SecondaryButton = makeButton(
   `${buttonBase} bg-neutral-900 hover:bg-neutral-800 text-white border-2 border-neutral-700`,
@@ -89,8 +89,8 @@ export const DangerButton = makeButton(
 type Tone = 'info' | 'warn' | 'danger' | 'success' | 'neutral';
 
 const TONE: Record<Tone, string> = {
-  info: 'border-[var(--color-navy-400)] bg-[var(--color-navy-900)] text-white',
-  warn: 'border-yellow-400 bg-yellow-400/10 text-white',
+  info: 'border-[var(--color-accent-400)] bg-[var(--color-accent-900)] text-white',
+  warn: 'border-accent-400 bg-accent-400/10 text-white',
   danger: 'border-[var(--color-danger-soft)] bg-[var(--color-danger)]/15 text-white',
   success: 'border-[var(--color-success)] bg-[var(--color-success)]/15 text-white',
   neutral: 'border-neutral-800 bg-neutral-900 text-white',
@@ -127,7 +127,7 @@ export function BlockerList({ items }: { items: string[] }) {
     <ul className="flex flex-col gap-1.5 mt-2">
       {items.map((item) => (
         <li key={item} className="flex items-start gap-2 text-sm text-neutral-200">
-          <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" aria-hidden="true" />
+          <AlertTriangle className="w-4 h-4 text-accent-400 shrink-0 mt-0.5" aria-hidden="true" />
           <span>{item}</span>
         </li>
       ))}
@@ -148,8 +148,8 @@ export function ErrorNotice({ error }: { error: unknown }) {
 }
 
 const CHIP: Record<Tone, string> = {
-  info: 'bg-[var(--color-navy-700)] text-white',
-  warn: 'bg-yellow-400 text-neutral-950',
+  info: 'bg-[var(--color-accent-700)] text-white',
+  warn: 'bg-accent-400 text-neutral-950',
   danger: 'bg-[var(--color-danger)] text-white',
   success: 'bg-[var(--color-success)] text-white',
   neutral: 'bg-neutral-800 text-neutral-300',
@@ -294,7 +294,7 @@ export function CopyButton({ text, label = 'Copy link' }: { text: string; label?
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-yellow-400 hover:text-yellow-300"
+      className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-accent-400 hover:text-accent-300"
     >
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
       {copied ? 'Copied' : label}
@@ -305,7 +305,7 @@ export function CopyButton({ text, label = 'Copy link' }: { text: string; label?
 /** A one-time link to hand to someone, with a way to copy it. */
 export function LinkBox({ url, note }: { url: string; note?: ReactNode }) {
   return (
-    <div className="border-2 border-yellow-400 bg-yellow-400/10 p-3 flex flex-col gap-2">
+    <div className="border-2 border-accent-400 bg-accent-400/10 p-3 flex flex-col gap-2">
       <input
         readOnly
         value={url}
